@@ -1,12 +1,14 @@
 #pragma once
 
+#include <string>
+#include <glm/glm.hpp>
 #include "vulkan_texture.h"
 
 struct PBRMaterial
 {
     float Roughness = 0.0f;
     bool IsMetal = false;
-    Vector3f Color = Vector3f(0.0f, 0.0f, 0.0f);
+    glm::vec3 Color = glm::vec3(0.0f, 0.0f, 0.0f);
     Texture* pAlbedo = NULL;
     Texture* pRoughness = NULL;
     Texture* pMetallic = NULL;
@@ -22,9 +24,9 @@ public:
 
     std::string m_name;
 
-    Vector4f AmbientColor = Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
-    Vector4f DiffuseColor = Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
-    Vector4f SpecularColor = Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec4 AmbientColor = glm::vec4(0.0f);
+    glm::vec4 DiffuseColor = glm::vec4(0.0f);
+    glm::vec4 SpecularColor = glm::vec4(0.0f);
 
     PBRMaterial PBRmaterial;
 

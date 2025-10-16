@@ -1,8 +1,8 @@
 #pragma once
 
 #include "camera.h"
-#include "demolition_scene.h"
-#include "demolition_model.h"
+#include "scene_interface.h"
+#include "model_interface.h"
 
 
 class GameCallbacks
@@ -38,11 +38,11 @@ enum RENDERING_SYSTEM {
 };
 
 
-class RenderingSystem
+class IRenderingSystem
 {
 public:
 
-    static RenderingSystem* CreateRenderingSystem(RENDERING_SYSTEM RenderingSystem, GameCallbacks* pGameCallbacks, bool LoadBasicShapes);
+    static IRenderingSystem* CreateRenderingSystem(RENDERING_SYSTEM RenderingSystem, GameCallbacks* pGameCallbacks, bool LoadBasicShapes);
 
     virtual void* CreateWindow(int Width, int Height, const char* pWindowName) = 0;
 
@@ -50,17 +50,17 @@ public:
 
     virtual void Execute() = 0;
 
-    virtual Scene* CreateEmptyScene() = 0;
+    virtual IScene* CreateEmptyScene() = 0;
 
-    virtual Scene* CreateScene(const std::string& Filename) = 0;
+    virtual IScene* CreateScene(const std::string& Filename) = 0;
 
-    virtual Scene* CreateDefaultScene() = 0;
+    virtual IScene* CreateDefaultScene() = 0;
 
-    virtual void SetScene(Scene* pScene) = 0;
+    virtual void SetScene(IScene* pScene) = 0;
 
-    virtual Scene* GetScene() = 0;
+    virtual IScene* GetScene() = 0;
 
-    virtual Model* LoadModel(const std::string& Filename) = 0;
+    virtual IModel* LoadModel(const std::string& Filename) = 0;
 
     virtual Grid* CreateGrid(int Width, int Depth) = 0;
 

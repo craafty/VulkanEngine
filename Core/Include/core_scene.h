@@ -2,9 +2,9 @@
 
 #include <list>
 
-#include "demolition_scene.h"
-#include "demolition_object.h"
-#include "Int/core_model.h"
+#include "scene_interface.h"
+#include "scene_object.h"
+#include "core_model.h"
 
 
 class CoreSceneObject : public SceneObject {
@@ -41,7 +41,7 @@ public:
     CoreSceneConfig() {}
 }*/
 
-class CoreScene : public Scene, public Object {
+class CoreScene : public IScene, public SceneObject {
 public:
     CoreScene(CoreRenderingSystem* pRenderingSystem);
 
@@ -49,7 +49,7 @@ public:
 
     virtual void LoadScene(const std::string& Filename);
 
-    virtual SceneObject* CreateSceneObject(Model* pModel);
+    virtual SceneObject* CreateSceneObject(IModel* pModel);
 
     virtual SceneObject* CreateSceneObject(const std::string& BasicShape);
 
@@ -61,7 +61,7 @@ public:
 
     const std::vector<DirectionalLight>& GetDirLights();
 
-    GLMCameraFirstPerson* GetCurrentCamera() { return &m_defaultCamera; }
+    Camera* GetCurrentCamera() { return &m_defaultCamera; }
 
     void InitializeDefault();
 
@@ -73,9 +73,9 @@ public:
 
     bool IsClearFrame() const { return m_clearFrame; }
 
-    const Vector4f& GetClearColor() { return m_clearColor; }
+    const glm::vec4& GetClearColor() { return m_clearColor; }
 
-    void SetCamera(const Vector3f& Pos, const Vector3f& Target);
+    void SetCamera(const glm::vec3& Pos, const glm::vec3& Target);
 
     void SetCameraSpeed(float Speed);
 
@@ -93,7 +93,7 @@ private:
     void CreateDefaultCamera();
     CoreSceneObject* CreateSceneObjectInternal(CoreModel* pModel);
 
-    GLMCameraFirstPerson m_defaultCamera;
+    Camera m_defaultCamera;
     std::vector<CoreSceneObject> m_sceneObjects;
     int m_numSceneObjects = 0;
     CoreSceneObject* m_pPickedSceneObject = NULL;

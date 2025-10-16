@@ -41,7 +41,7 @@ namespace Engine {
 	}
 
 
-	void VkModel::CreateDescriptorSets(GraphicsPipelineV2& Pipeline)
+	void VkModel::CreateDescriptorSets(GraphicsPipeline& Pipeline)
 	{
 		int NumSubmeshes = (int)m_Meshes.size();
 		Pipeline.AllocateDescriptorSets(NumSubmeshes, m_descriptorSets);
@@ -87,8 +87,8 @@ namespace Engine {
 			size_t range = m_Meshes[SubmeshIndex].NumVertices * m_vertexSize;
 			md.m_ranges[SubmeshIndex].m_vbRange = { .m_offset = offset, .m_range = range };
 
-			offset = m_Meshes[SubmeshIndex].BaseIndex * sizeof(u32);
-			range = m_Meshes[SubmeshIndex].NumIndices * sizeof(u32);
+			offset = m_Meshes[SubmeshIndex].BaseIndex * sizeof(uint32_t);
+			range = m_Meshes[SubmeshIndex].NumIndices * sizeof(uint32_t);
 			md.m_ranges[SubmeshIndex].m_ibRange = { .m_offset = offset, .m_range = range };
 
 			offset = SubmeshIndex * UNIFORM_BUFFER_SIZE;
@@ -98,13 +98,13 @@ namespace Engine {
 	}
 
 
-	void VkModel::RecordCommandBuffer(VkCommandBuffer CmdBuf, GraphicsPipelineV2& Pipeline, int ImageIndex)
+	void VkModel::RecordCommandBuffer(VkCommandBuffer CmdBuf, GraphicsPipeline& Pipeline, int ImageIndex)
 	{
-		u32 InstanceCount = 1;
-		u32 FirstInstance = 0;
-		u32 BaseVertex = 0;
+		uint32_t InstanceCount = 1;
+		uint32_t FirstInstance = 0;
+		uint32_t BaseVertex = 0;
 
-		for (u32 SubmeshIndex = 0; SubmeshIndex < m_Meshes.size(); SubmeshIndex++) {
+		for (uint32_t SubmeshIndex = 0; SubmeshIndex < m_Meshes.size(); SubmeshIndex++) {
 			vkCmdBindDescriptorSets(CmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				Pipeline.GetPipelineLayout(),
 				0,  // firstSet
@@ -123,7 +123,7 @@ namespace Engine {
 	{
 		std::vector<glm::mat4> Transformations(m_Meshes.size());
 
-		for (u32 SubmeshIndex = 0; SubmeshIndex < Transformations.size(); SubmeshIndex++) {
+		for (uint32_t SubmeshIndex = 0; SubmeshIndex < Transformations.size(); SubmeshIndex++) {
 			glm::mat4 MeshTransform = glm::make_mat4(m_Meshes[SubmeshIndex].Transformation.data());
 			MeshTransform = glm::transpose(MeshTransform);
 			Transformations[SubmeshIndex] = Transformation * MeshTransform;

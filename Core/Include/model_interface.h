@@ -1,9 +1,9 @@
 #pragma once
 
-#include "demolition_object.h"
+#include "scene_object.h"
 #include "material.h"
 
-class Model : public Object
+class IModel : public SceneObjectBase
 {
 public:
 
@@ -27,6 +27,6 @@ protected:
 };
 
 
-class Grid : public Model
+class Grid : public IModel
 {
 };

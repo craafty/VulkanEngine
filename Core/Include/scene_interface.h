@@ -3,50 +3,50 @@
 #include <list>
 
 #include "camera.h"
-#include "demolition_lights.h"
-#include "demolition_model.h"
+#include "lights.h"
+#include "model_interface.h"
 
 // Nobody needs more than 640k
 #define MAX_NUM_ROTATIONS 8
 
-class SceneObject : public Object {
+class SceneObject : public SceneObjectBase {
 public:
     void SetPosition(float x, float y, float z) { m_pos.x = x; m_pos.y = y; m_pos.z = z; }
     void SetRotation(float x, float y, float z);
     void SetScale(float x, float y, float z) { m_scale.x = x; m_scale.y = y; m_scale.z = z; }
 
-    void SetPosition(const Vector3f& Pos) { m_pos = Pos; }
-    const Vector3f& GetPosition() const { return m_pos; }
-    void SetRotation(const Vector3f& Rot);
-    void PushRotation(const Vector3f& Rot);
+    void SetPosition(const glm::vec3& Pos) { m_pos = Pos; }
+    const glm::vec3& GetPosition() const { return m_pos; }
+    void SetRotation(const glm::vec3& Rot);
+    void PushRotation(const glm::vec3& Rot);
     void ResetRotations() { m_numRotations = 0; }
-    void SetScale(const Vector3f& Scale) { m_scale = Scale; }
+    void SetScale(const glm::vec3& Scale) { m_scale = Scale; }
 
     void RotateBy(float x, float y, float z);
 
-    Matrix4f GetMatrix() const;
+    glm::mat4 GetMatrix() const;
 
-    void SetFlatColor(const Vector4f Col) { m_flatColor = Col; }
-    const Vector4f& GetFlatColor() const { return m_flatColor; }
+    void SetFlatColor(const glm::vec4 Col) { m_flatColor = Col; }
+    const glm::vec4& GetFlatColor() const { return m_flatColor; }
 
     void SetColorMod(float r, float g, float b) { m_colorMod.r = r; m_colorMod.g = g; m_colorMod.b = b; }
-    Vector3f GetColorMod() const { return m_colorMod; }
+    glm::vec3 GetColorMod() const { return m_colorMod; }
 
     void SetQuaternion(const glm::quat& q) { m_quaternion = q; }
 
 protected:
     SceneObject();
-    void CalcRotationStack(Matrix4f& Rot) const;
+    void CalcRotationStack(glm::mat4& Rot) const;
 
-    Vector3f m_pos = Vector3f(0.0f, 0.0f, 0.0f);
-    Vector3f m_scale = Vector3f(1.0f, 1.0f, 1.0f);
+    glm::vec3 m_pos = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 m_scale = glm::vec3(1.0f, 1.0f, 1.0f);
 
 private:
 
-    Vector3f m_rotations[MAX_NUM_ROTATIONS];
+    glm::vec3 m_rotations[MAX_NUM_ROTATIONS];
     int m_numRotations = 0;
-    Vector4f m_flatColor = Vector4f(-1.0f, -1.0f, -1.0f, -1.0f);
-    Vector3f m_colorMod = Vector3f(1.0f, 1.0f, 1.0f);
+    glm::vec4 m_flatColor = glm::vec4(-1.0f, -1.0f, -1.0f, -1.0f);
+    glm::vec3 m_colorMod = glm::vec3(1.0f, 1.0f, 1.0f);
     glm::quat m_quaternion = glm::quat(0.0f, 0.0f, 0.0f, 0.0f);
 };
 
@@ -55,8 +55,8 @@ struct InfiniteGridConfig {
     bool Enabled = false;
     float Size = 100.0f;
     float CellSize = 0.025f;
-    Vector4f ColorThin = Vector4f(0.5f, 0.5f, 0.5f, 1.0f);
-    Vector4f ColorThick = Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+    glm::vec4 ColorThin = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    glm::vec4 ColorThick = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     float MinPixelsBetweenCells = 2.0f;
     bool ShadowsEnabled = false;
 };
@@ -91,13 +91,13 @@ struct CameraState {
 
 };
 
-class Scene {
+class IScene {
 public:
-    Scene();
+    IScene();
 
-    ~Scene() {}
+    ~IScene() {}
 
-    virtual SceneObject* CreateSceneObject(Model* pModel) = 0;
+    virtual SceneObject* CreateSceneObject(IModel* pModel) = 0;
 
     virtual SceneObject* CreateSceneObject(const std::string& BasicShape) = 0;
 
@@ -107,9 +107,9 @@ public:
 
     virtual std::list<SceneObject*> GetSceneObjectsList() = 0;
 
-    virtual void SetCamera(const Vector3f& Pos, const Vector3f& Target) = 0;
+    virtual void SetCamera(const glm::vec3& Pos, const glm::vec3& Target) = 0;
 
-    virtual GLMCameraFirstPerson* GetCurrentCamera() = 0;
+    virtual Camera* GetCurrentCamera() = 0;
 
     virtual void SetCameraSpeed(float Speed) = 0;
 
@@ -125,13 +125,13 @@ public:
 
     std::vector<DirectionalLight>& GetDirLights() { return m_dirLights; }
 
-    void SetClearColor(const Vector4f& Color) { m_clearColor = Color; m_clearFrame = true; }
+    void SetClearColor(const glm::vec4& Color) { m_clearColor = Color; m_clearFrame = true; }
 
     void DisableClear() { m_clearFrame = false; }
 
 protected:
     bool m_clearFrame = false;
-    Vector4f m_clearColor;
+    glm::vec4 m_clearColor;
 
     std::vector<PointLight> m_pointLights;
     std::vector<SpotLight> m_spotLights;

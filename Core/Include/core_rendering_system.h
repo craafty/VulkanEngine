@@ -1,30 +1,30 @@
 #pragma once
 
 #include "camera.h"
-#include "demolition_rendering_system.h"
-#include "Int/core_model.h"
-#include "Int/core_scene.h"
+#include "rendering_system_interface.h"
+#include "core_model.h"
+#include "core_scene.h"
 
 
-class CoreRenderingSystem : public RenderingSystem
+class CoreRenderingSystem : public IRenderingSystem
 {
 public:
 
-    virtual Scene* CreateScene(const std::string& Filename);
+    virtual IScene* CreateScene(const std::string& Filename);
 
-    virtual Scene* CreateDefaultScene();
+    virtual IScene* CreateDefaultScene();
 
     virtual void* CreateWindow(int Width, int Height, const char* pWindowName);
 
-    virtual Model* LoadModel(const std::string& Filename);
+    virtual IModel* LoadModel(const std::string& Filename);
 
     virtual Grid* CreateGrid(int Width, int Depth);
 
-    virtual Model* GetModel(const std::string& BasicShape);
+    virtual IModel* GetModel(const std::string& BasicShape);
 
-    virtual void SetScene(Scene* pScene);
+    virtual void SetScene(IScene* pScene);
 
-    virtual Scene* GetScene();
+    virtual IScene* GetScene();
 
     virtual BaseTexture* GetTexture(int TextureHandle) = 0;
 
@@ -32,7 +32,7 @@ public:
 
     virtual long long GetElapsedTimeMillis() const { return m_elapsedTimeMillis; }
 
-    virtual GLMCameraFirstPerson* GetCurrentCamera() { return m_pCamera; }
+    virtual Camera* GetCurrentCamera() { return m_pCamera; }
 
 protected:
 
@@ -46,12 +46,12 @@ protected:
 
     virtual Grid* CreateGridInternal(int Width, int Depth) = 0;
 
-    virtual void SetCamera(GLMCameraFirstPerson* pCamera) = 0;
+    virtual void SetCamera(Camera* pCamera) = 0;
 
     long long m_elapsedTimeMillis = 0;
     int m_windowWidth = 0;
     int m_windowHeight = 0;
-    GLMCameraFirstPerson* m_pCamera = NULL;
+    Camera* m_pCamera = NULL;
     GameCallbacks* m_pGameCallbacks = NULL;
     GameCallbacks m_defaultGameCallbacks;
     CoreScene* m_pScene = NULL;

@@ -1,5 +1,5 @@
-#include "Int/core_rendering_system.h"
-#include "Int/core_model.h"
+#include "core_rendering_system.h"
+#include "core_model.h"
 #include "src/meshoptimizer.h"
 
 using namespace std;
@@ -25,17 +25,15 @@ static bool UseMeshOptimizer = false;
 Texture* s_pMissingTexture = NULL;
 
 static void traverse(int depth, aiNode* pNode);
-static bool GetFullTransformation(const aiNode* pRootNode, const char* pName, Matrix4f& Transformation);
+static bool GetFullTransformation(const aiNode* pRootNode, const char* pName, glm::mat4& Transformation);
 
-inline Vector3f VectorFromAssimpVector(const aiVector3D& v)
-{
-    Vector3f ret;
-
-    ret.x = v.x;
-    ret.y = v.y;
-    ret.z = v.z;
-
-    return ret;
+inline glm::mat4 AssimpToGLM(const aiMatrix4x4& from) {
+    glm::mat4 to;
+    to[0][0] = from.a1; to[1][0] = from.a2; to[2][0] = from.a3; to[3][0] = from.a4;
+    to[0][1] = from.b1; to[1][1] = from.b2; to[2][1] = from.b3; to[3][1] = from.b4;
+    to[0][2] = from.c1; to[1][2] = from.c2; to[2][2] = from.c3; to[3][2] = from.c4;
+    to[0][3] = from.d1; to[1][3] = from.d2; to[2][3] = from.d3; to[3][3] = from.d4;
+    return to;
 }
 
 
@@ -114,11 +112,7 @@ bool CoreModel::InitGeometry(const aiScene* pScene, const string& Filename)
 
     InitGeometryPost();
 
-#ifdef OGLDEV_VULKAN
     return true;
-#else
-    return GLCheckError();
-#endif
 }
 
 
@@ -152,11 +146,11 @@ void CoreModel::CountVerticesAndIndices(const aiScene* pScene, unsigned int& Num
 }
 
 
-uint CoreModel::CountValidFaces(const aiMesh& Mesh)
+unsigned int CoreModel::CountValidFaces(const aiMesh& Mesh)
 {
-    uint NumValidFaces = 0;
+    unsigned int NumValidFaces = 0;
 
-    for (uint i = 0; i < Mesh.mNumFaces; i++) {
+    for (unsigned int i = 0; i < Mesh.mNumFaces; i++) {
         if (Mesh.mFaces[i].mNumIndices == 3) {
             NumValidFaces++;
         }
@@ -195,19 +189,19 @@ void CoreModel::CalculateMeshTransformations(const aiScene* pScene)
 {
     printf("----------------------------------------\n");
     printf("Calculating mesh transformations\n");
-    Matrix4f Transformation;
+    glm::mat4 Transformation;
     Transformation.InitIdentity();
 
     TraverseNodeHierarchy(Transformation, pScene->mRootNode);
 }
 
 
-void CoreModel::TraverseNodeHierarchy(Matrix4f ParentTransformation, aiNode* pNode)
+void CoreModel::TraverseNodeHierarchy(glm::mat4 ParentTransformation, aiNode* pNode)
 {
     printf("Traversing node '%s'\n", pNode->mName.C_Str());
-    Matrix4f NodeTransformation(pNode->mTransformation);
+    glm::mat4 NodeTransformation(pNode->mTransformation);
 
-    Matrix4f CombinedTransformation = ParentTransformation * NodeTransformation;
+    glm::mat4 CombinedTransformation = ParentTransformation * NodeTransformation;
 
     printf("Combined transformation:\n");
     CombinedTransformation.Print();
@@ -225,7 +219,7 @@ void CoreModel::TraverseNodeHierarchy(Matrix4f ParentTransformation, aiNode* pNo
         printf("No meshes\n");
     }
 
-    for (uint i = 0; i < pNode->mNumChildren; i++) {
+    for (unsigned int i = 0; i < pNode->mNumChildren; i++) {
         TraverseNodeHierarchy(CombinedTransformation, pNode->mChildren[i]);
     }
 
@@ -233,7 +227,7 @@ void CoreModel::TraverseNodeHierarchy(Matrix4f ParentTransformation, aiNode* pNo
 
 
 template<typename VertexType>
-void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, uint MeshIndex, const aiMesh* paiMesh)
+void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, unsigned int MeshIndex, const aiMesh* paiMesh)
 {
     const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
 
@@ -243,7 +237,7 @@ void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, uint MeshIndex, con
 
     for (unsigned int i = 0; i < paiMesh->mNumVertices; i++) {
         const aiVector3D& Pos = paiMesh->mVertices[i];
-        v.Position = Vector3f(Pos.x, Pos.y, Pos.z);
+        v.Position = glm::vec3(Pos.x, Pos.y, Pos.z);
 
         m_minPos.x = std::min(m_minPos.x, v.Position.x);
         m_minPos.y = std::min(m_minPos.y, v.Position.y);
@@ -255,11 +249,11 @@ void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, uint MeshIndex, con
 
         if (paiMesh->mNormals) {
             const aiVector3D& pNormal = paiMesh->mNormals[i];
-            v.Normal = Vector3f(pNormal.x, pNormal.y, pNormal.z);
+            v.Normal = glm::vec3(pNormal.x, pNormal.y, pNormal.z);
         }
         else {
             aiVector3D Normal(0.0f, 1.0f, 0.0f);
-            v.Normal = Vector3f(Normal.x, Normal.y, Normal.z);
+            v.Normal = glm::vec3(Normal.x, Normal.y, Normal.z);
         }
 
         if (paiMesh->HasTextureCoords(0)) {
@@ -267,15 +261,15 @@ void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, uint MeshIndex, con
             v.TexCoords = Vector2f(pTexCoord.x, pTexCoord.y);
 
             const aiVector3D& pTangent = paiMesh->mTangents[i];
-            v.Tangent = Vector3f(pTangent.x, pTangent.y, pTangent.z);
+            v.Tangent = glm::vec3(pTangent.x, pTangent.y, pTangent.z);
 
             const aiVector3D& pBitangent = paiMesh->mBitangents[i];
-            v.Bitangent = Vector3f(pBitangent.x, pBitangent.y, pBitangent.z);
+            v.Bitangent = glm::vec3(pBitangent.x, pBitangent.y, pBitangent.z);
         }
         else {
             v.TexCoords = Vector2f(0.0f);
-            v.Tangent = Vector3f(0.0f);
-            v.Bitangent = Vector3f(0.0f);
+            v.Tangent = glm::vec3(0.0f);
+            v.Bitangent = glm::vec3(0.0f);
         }
 
         /*   printf("Pos %d: ", i); v.Position.Print();
@@ -309,7 +303,7 @@ void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, uint MeshIndex, con
 
 
 template<typename VertexType>
-void CoreModel::InitSingleMeshOpt(vector<VertexType>& AllVertices, uint MeshIndex, const aiMesh* paiMesh)
+void CoreModel::InitSingleMeshOpt(vector<VertexType>& AllVertices, unsigned int MeshIndex, const aiMesh* paiMesh)
 {
     const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
 
@@ -321,8 +315,8 @@ void CoreModel::InitSingleMeshOpt(vector<VertexType>& AllVertices, uint MeshInde
 
     for (unsigned int i = 0; i < paiMesh->mNumVertices; i++) {
         const aiVector3D& Pos = paiMesh->mVertices[i];
-        // printf("%d: ", i); Vector3f v(pPos.x, pPos.y, pPos.z); v.Print();
-        v.Position = Vector3f(Pos.x, Pos.y, Pos.z);
+        // printf("%d: ", i); glm::vec3 v(pPos.x, pPos.y, pPos.z); v.Print();
+        v.Position = glm::vec3(Pos.x, Pos.y, Pos.z);
 
         m_minPos.x = std::min(m_minPos.x, v.Position.x);
         m_minPos.y = std::min(m_minPos.y, v.Position.y);
@@ -333,21 +327,21 @@ void CoreModel::InitSingleMeshOpt(vector<VertexType>& AllVertices, uint MeshInde
 
         if (paiMesh->mNormals) {
             const aiVector3D& pNormal = paiMesh->mNormals[i];
-            v.Normal = Vector3f(pNormal.x, pNormal.y, pNormal.z);
+            v.Normal = glm::vec3(pNormal.x, pNormal.y, pNormal.z);
         }
         else {
             aiVector3D Normal(0.0f, 1.0f, 0.0f);
-            v.Normal = Vector3f(Normal.x, Normal.y, Normal.z);
+            v.Normal = glm::vec3(Normal.x, Normal.y, Normal.z);
         }
 
         const aiVector3D& pTexCoord = paiMesh->HasTextureCoords(0) ? paiMesh->mTextureCoords[0][i] : Zero3D;
         v.TexCoords = Vector2f(pTexCoord.x, pTexCoord.y);
 
         const aiVector3D& pTangent = paiMesh->mTangents[i];
-        v.Tangent = Vector3f(pTangent.x, pTangent.y, pTangent.z);
+        v.Tangent = glm::vec3(pTangent.x, pTangent.y, pTangent.z);
 
         const aiVector3D& pBitangent = paiMesh->mBitangents[i];
-        v.Bitangent = Vector3f(pBitangent.x, pBitangent.y, pBitangent.z);
+        v.Bitangent = glm::vec3(pBitangent.x, pBitangent.y, pBitangent.z);
 
         /*   printf("Pos %d: ", i); v.Position.Print();
            printf("Normal: "); v.Normal.Print();
@@ -358,12 +352,12 @@ void CoreModel::InitSingleMeshOpt(vector<VertexType>& AllVertices, uint MeshInde
         Vertices[i] = v;
     }
 
-    m_Meshes[MeshIndex].BaseVertex = (uint)AllVertices.size();
-    m_Meshes[MeshIndex].BaseIndex = (uint)m_Indices.size();
+    m_Meshes[MeshIndex].BaseVertex = (unsigned int)AllVertices.size();
+    m_Meshes[MeshIndex].BaseIndex = (unsigned int)m_Indices.size();
 
     int NumIndices = paiMesh->mNumFaces * 3;
 
-    std::vector<uint> Indices;
+    std::vector<unsigned int> Indices;
     Indices.resize(NumIndices);
 
     // Populate the index buffer
@@ -389,7 +383,7 @@ void CoreModel::InitSingleMeshOpt(vector<VertexType>& AllVertices, uint MeshInde
 
 
 template<typename VertexType>
-void CoreModel::OptimizeMesh(int MeshIndex, std::vector<uint>& Indices, std::vector<VertexType>& Vertices, std::vector<VertexType>& AllVertices)
+void CoreModel::OptimizeMesh(int MeshIndex, std::vector<unsigned int>& Indices, std::vector<VertexType>& Vertices, std::vector<VertexType>& AllVertices)
 {
     size_t NumIndices = Indices.size();
     size_t NumVertices = Vertices.size();
@@ -403,7 +397,7 @@ void CoreModel::OptimizeMesh(int MeshIndex, std::vector<uint>& Indices, std::vec
         NumVertices,     // ...and size
         sizeof(VertexType)); // stride
     // Allocate a local index/vertex arrays
-    std::vector<uint> OptIndices;
+    std::vector<unsigned int> OptIndices;
     std::vector<VertexType> OptVertices;
     OptIndices.resize(NumIndices);
     OptVertices.resize(OptVertexCount);
@@ -445,7 +439,7 @@ void CoreModel::OptimizeMesh(int MeshIndex, std::vector<uint>& Indices, std::vec
 
     AllVertices.insert(AllVertices.end(), OptVertices.begin(), OptVertices.end());
 
-    m_Meshes[MeshIndex].NumIndices = (uint)OptIndexCount;
+    m_Meshes[MeshIndex].NumIndices = (unsigned int)OptIndexCount;
 }
 
 
@@ -721,7 +715,7 @@ void CoreModel::LoadColors(const aiMaterial* pMaterial, int index)
 
     material.m_name = pMaterial->GetName().C_Str();
 
-    Vector4f AllOnes(1.0f, 1.0f, 1.0f, 1.0f);
+    glm::vec4 AllOnes(1.0f, 1.0f, 1.0f, 1.0f);
 
     int ShadingModel = 0;
     if (pMaterial->Get(AI_MATKEY_SHADING_MODEL, ShadingModel) == AI_SUCCESS) {
@@ -808,10 +802,10 @@ static void traverse(int depth, aiNode* pNode)
 
     printf("%s\n", pNode->mName.C_Str());
 
-    Matrix4f NodeTransformation(pNode->mTransformation);
+    glm::mat4 NodeTransformation(pNode->mTransformation);
     NodeTransformation.Print();
 
-    for (uint i = 0; i < pNode->mNumChildren; i++) {
+    for (unsigned int i = 0; i < pNode->mNumChildren; i++) {
         traverse(depth + 1, pNode->mChildren[i]);
     }
 }
@@ -835,16 +829,16 @@ void CoreModel::InitSingleCamera(int Index, const aiScene* pScene)
     const aiCamera* pCamera = pScene->mCameras[Index];
     printf("Camera name: '%s'\n", pCamera->mName.C_Str());
 
-    Matrix4f Transformation;
+    glm::mat4 Transformation;
     GetFullTransformation(pScene->mRootNode, pCamera->mName.C_Str(), Transformation);
 
     aiMatrix4x4 aiCameraMatrix;
     pCamera->GetCameraMatrix(aiCameraMatrix);
-    Matrix4f CameraMatrix(aiCameraMatrix);
+    glm::mat4 CameraMatrix(aiCameraMatrix);
     printf("Camera internal transformation:\n");
     CameraMatrix.Print();
 
-    Matrix4f ChangeSystem;
+    glm::mat4 ChangeSystem;
     ChangeSystem.InitIdentity();
     ChangeSystem.m[2][2] = -1;
 
@@ -854,25 +848,25 @@ void CoreModel::InitSingleCamera(int Index, const aiScene* pScene)
 
     //  Transformation =  CameraMatrix * Transformation;
 
-    Vector3f Pos = VectorFromAssimpVector(pCamera->mPosition);
-    Vector3f Target = VectorFromAssimpVector(pCamera->mLookAt);
-    Vector3f Up = VectorFromAssimpVector(pCamera->mUp);
+    glm::vec3 Pos = VectorFromAssimpVector(pCamera->mPosition);
+    glm::vec3 Target = VectorFromAssimpVector(pCamera->mLookAt);
+    glm::vec3 Up = VectorFromAssimpVector(pCamera->mUp);
 
     printf("Original pos: "); Pos.Print();
     printf("Original target: "); Target.Print();
     printf("Original up: "); Up.Print();
 
-    Vector4f Pos4D(Pos, 1.0f);
+    glm::vec4 Pos4D(Pos, 1.0f);
     Pos4D = Transformation * Pos4D;
-    Vector3f FinalPos = Pos4D;
+    glm::vec3 FinalPos = Pos4D;
 
-    Vector4f Target4D(Target, 0.0f);
+    glm::vec4 Target4D(Target, 0.0f);
     Target4D = Transformation * Target4D;
-    Vector3f FinalTarget = Target4D;
+    glm::vec3 FinalTarget = Target4D;
 
-    Vector4f Up4D(Up, 0.0f);
+    glm::vec4 Up4D(Up, 0.0f);
     Up4D = Transformation * Up4D;
-    Vector3f FinalUp = Up4D;
+    glm::vec3 FinalUp = Up4D;
 
     printf("Final pos: "); FinalPos.Print();
     printf("Final target: "); FinalTarget.Print();
@@ -888,7 +882,7 @@ void CoreModel::InitSingleCamera(int Index, const aiScene* pScene)
 
     //exit(0);*/
 
-    Vector3f Center = FinalPos + FinalTarget;
+    glm::vec3 Center = FinalPos + FinalTarget;
     m_cameras[Index].Init(FinalPos.ToGLM(), Center.ToGLM(), FinalUp.ToGLM(), persProjInfo);
 }
 
@@ -937,7 +931,7 @@ void CoreModel::InitSingleLight(const aiScene* pScene, const aiLight& light)
 }
 
 
-static bool GetFullTransformation(const aiNode* pRootNode, const char* pName, Matrix4f& Transformation)
+static bool GetFullTransformation(const aiNode* pRootNode, const char* pName, glm::mat4& Transformation)
 {
     Transformation.InitIdentity();
 
@@ -949,7 +943,7 @@ static bool GetFullTransformation(const aiNode* pRootNode, const char* pName, Ma
     }
 
     while (pNode) {
-        Matrix4f NodeTransformation(pNode->mTransformation);
+        glm::mat4 NodeTransformation(pNode->mTransformation);
         Transformation = NodeTransformation * Transformation;
         pNode = pNode->mParent;
     }
@@ -966,23 +960,23 @@ void CoreModel::InitDirectionalLight(const aiScene* pScene, const aiLight& light
     }
 
     DirectionalLight l;
-    //l.Color = Vector3f(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
-    l.Color = Vector3f(1.0f);
+    //l.Color = glm::vec3(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
+    l.Color = glm::vec3(1.0f);
     l.DiffuseIntensity = 1.0f; // TODO
 
-    Matrix4f Transformation;
+    glm::mat4 Transformation;
     GetFullTransformation(pScene->mRootNode, light.mName.C_Str(), Transformation);
 
-    Vector3f Direction = VectorFromAssimpVector(light.mDirection);
+    glm::vec3 Direction = VectorFromAssimpVector(light.mDirection);
     printf("Original direction: "); Direction.Print();
-    Vector4f Dir4D(Direction, 0.0f);
+    glm::vec4 Dir4D(Direction, 0.0f);
     Dir4D = Transformation * Dir4D;
     l.WorldDirection = Dir4D;
     printf("Final direction: "); l.WorldDirection.Print();
 
-    Vector3f Up = VectorFromAssimpVector(light.mUp);
+    glm::vec3 Up = VectorFromAssimpVector(light.mUp);
     printf("Original up: "); Up.Print();
-    Vector4f Up4D(Up, 0.0f);
+    glm::vec4 Up4D(Up, 0.0f);
     Up4D = Transformation * Up4D;
     l.Up = Up4D;
     printf("Final up: "); l.Up.Print();
@@ -994,20 +988,20 @@ void CoreModel::InitDirectionalLight(const aiScene* pScene, const aiLight& light
 void CoreModel::InitPointLight(const aiScene* pScene, const aiLight& light)
 {
     PointLight l;
-    l.Color = Vector3f(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
-    //l.Color = Vector3f(1.0f);
+    l.Color = glm::vec3(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
+    //l.Color = glm::vec3(1.0f);
     l.DiffuseIntensity = 1.0f; // TODO
 
-    Vector3f Position = VectorFromAssimpVector(light.mPosition);
+    glm::vec3 Position = VectorFromAssimpVector(light.mPosition);
     printf("Original Position: "); Position.Print();
 
-    Matrix4f Transformation;
+    glm::mat4 Transformation;
 
     GetFullTransformation(pScene->mRootNode, light.mName.C_Str(), Transformation);
 
-    Vector4f Pos4D(Position, 1.0f);
+    glm::vec4 Pos4D(Position, 1.0f);
     Pos4D = Transformation * Pos4D;
-    Vector3f WorldPosition = Pos4D;
+    glm::vec3 WorldPosition = Pos4D;
     printf("World Position: "); WorldPosition.Print();
     l.WorldPosition = WorldPosition;
 
@@ -1024,44 +1018,44 @@ void CoreModel::InitPointLight(const aiScene* pScene, const aiLight& light)
 void CoreModel::InitSpotLight(const aiScene* pScene, const aiLight& light)
 {
     SpotLight l;
-    //l.Color = Vector3f(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
-    l.Color = Vector3f(1.0f);
+    //l.Color = glm::vec3(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
+    l.Color = glm::vec3(1.0f);
     l.DiffuseIntensity = 1.0f; // TODO
 
-    Matrix4f Transformation;
+    glm::mat4 Transformation;
     GetFullTransformation(pScene->mRootNode, light.mName.C_Str(), Transformation);
 
-    Vector3f Direction = VectorFromAssimpVector(light.mDirection);
+    glm::vec3 Direction = VectorFromAssimpVector(light.mDirection);
     printf("Original direction: "); Direction.Print();
-    Vector4f Dir4D(Direction, 0.0f);
+    glm::vec4 Dir4D(Direction, 0.0f);
     Dir4D = Transformation * Dir4D;
     l.WorldDirection = Dir4D;
     printf("Final direction: "); l.WorldDirection.Print();
 
-    Vector3f Up = VectorFromAssimpVector(light.mUp);
+    glm::vec3 Up = VectorFromAssimpVector(light.mUp);
     printf("Original up: "); Up.Print();
     if (Up.Length() == 0) {
         printf("Overiding a zero up vector\n");
-        if ((Dir4D == Vector4f(0.0f, 1.0f, 0.0f, 0.0f)) || (Dir4D == Vector4f(0.0f, -1.0f, 0.0f, 0.0f))) {
-            l.Up = Vector3f(1.0f, 0.0f, 0.0f);
+        if ((Dir4D == glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)) || (Dir4D == glm::vec4(0.0f, -1.0f, 0.0f, 0.0f))) {
+            l.Up = glm::vec3(1.0f, 0.0f, 0.0f);
         }
         else {
-            l.Up = Vector3f(0.0f, 1.0f, 0.0f);
+            l.Up = glm::vec3(0.0f, 1.0f, 0.0f);
         }
     }
     else {
-        Vector4f Up4D(Up, 0.0f);
+        glm::vec4 Up4D(Up, 0.0f);
         Up4D = Transformation * Up4D;
         l.Up = Up4D;
     }
 
     printf("Final up: "); l.Up.Print();
 
-    Vector3f Position = VectorFromAssimpVector(light.mPosition);
+    glm::vec3 Position = VectorFromAssimpVector(light.mPosition);
     printf("Original Position: "); Position.Print();
-    Vector4f Pos4D(Position, 1.0f);
+    glm::vec4 Pos4D(Position, 1.0f);
     Pos4D = Transformation * Pos4D;
-    Vector3f WorldPosition = Pos4D;
+    glm::vec3 WorldPosition = Pos4D;
     printf("World Position: "); WorldPosition.Print();
     l.WorldPosition = WorldPosition;
 
@@ -1083,7 +1077,7 @@ void CoreModel::InitSpotLight(const aiScene* pScene, const aiLight& light)
 }
 
 
-void CoreModel::LoadMeshBones(vector<SkinnedVertex>& SkinnedVertices, uint MeshIndex, const aiMesh* pMesh)
+void CoreModel::LoadMeshBones(vector<SkinnedVertex>& SkinnedVertices, unsigned int MeshIndex, const aiMesh* pMesh)
 {
     if (pMesh->mNumBones > MAX_BONES) {
         printf("The number of bones in the model (%d) is larger than the maximum supported (%d)\n", pMesh->mNumBones, MAX_BONES);
@@ -1092,14 +1086,14 @@ void CoreModel::LoadMeshBones(vector<SkinnedVertex>& SkinnedVertices, uint MeshI
     }
 
     // printf("Loading mesh bones %d\n", MeshIndex);
-    for (uint i = 0; i < pMesh->mNumBones; i++) {
+    for (unsigned int i = 0; i < pMesh->mNumBones; i++) {
         // printf("Bone %d %s\n", i, pMesh->mBones[i]->mName.C_Str());
         LoadSingleBone(SkinnedVertices, MeshIndex, pMesh->mBones[i]);
     }
 }
 
 
-void CoreModel::LoadSingleBone(vector<SkinnedVertex>& SkinnedVertices, uint MeshIndex, const aiBone* pBone)
+void CoreModel::LoadSingleBone(vector<SkinnedVertex>& SkinnedVertices, unsigned int MeshIndex, const aiBone* pBone)
 {
     int BoneId = GetBoneId(pBone);
 
@@ -1109,9 +1103,9 @@ void CoreModel::LoadSingleBone(vector<SkinnedVertex>& SkinnedVertices, uint Mesh
         m_BoneInfo.push_back(bi);
     }
 
-    for (uint i = 0; i < pBone->mNumWeights; i++) {
+    for (unsigned int i = 0; i < pBone->mNumWeights; i++) {
         const aiVertexWeight& vw = pBone->mWeights[i];
-        uint GlobalVertexID = m_Meshes[MeshIndex].BaseVertex + pBone->mWeights[i].mVertexId;
+        unsigned int GlobalVertexID = m_Meshes[MeshIndex].BaseVertex + pBone->mWeights[i].mVertexId;
         // printf("%d: %d %f\n",i, pBone->mWeights[i].mVertexId, vw.mWeight);
         SkinnedVertices[GlobalVertexID].Bones.AddBoneData(BoneId, vw.mWeight);
     }
@@ -1178,9 +1172,9 @@ int CoreModel::GetBoneId(const aiBone* pBone)
 }
 
 
-uint CoreModel::FindPosition(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim)
+unsigned int CoreModel::FindPosition(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim)
 {
-    for (uint i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++) {
+    for (unsigned int i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++) {
         float t = (float)pNodeAnim->mPositionKeys[i + 1].mTime;
         if (AnimationTimeTicks < t) {
             return i;
@@ -1199,8 +1193,8 @@ void CoreModel::CalcInterpolatedPosition(aiVector3D& Out, float AnimationTimeTic
         return;
     }
 
-    uint PositionIndex = FindPosition(AnimationTimeTicks, pNodeAnim);
-    uint NextPositionIndex = PositionIndex + 1;
+    unsigned int PositionIndex = FindPosition(AnimationTimeTicks, pNodeAnim);
+    unsigned int NextPositionIndex = PositionIndex + 1;
     assert(NextPositionIndex < pNodeAnim->mNumPositionKeys);
     float t1 = (float)pNodeAnim->mPositionKeys[PositionIndex].mTime;
     if (t1 > AnimationTimeTicks) {
@@ -1219,11 +1213,11 @@ void CoreModel::CalcInterpolatedPosition(aiVector3D& Out, float AnimationTimeTic
 }
 
 
-uint CoreModel::FindRotation(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim)
+unsigned int CoreModel::FindRotation(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim)
 {
     assert(pNodeAnim->mNumRotationKeys > 0);
 
-    for (uint i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++) {
+    for (unsigned int i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++) {
         float t = (float)pNodeAnim->mRotationKeys[i + 1].mTime;
         if (AnimationTimeTicks < t) {
             return i;
@@ -1242,8 +1236,8 @@ void CoreModel::CalcInterpolatedRotation(aiQuaternion& Out, float AnimationTimeT
         return;
     }
 
-    uint RotationIndex = FindRotation(AnimationTimeTicks, pNodeAnim);
-    uint NextRotationIndex = RotationIndex + 1;
+    unsigned int RotationIndex = FindRotation(AnimationTimeTicks, pNodeAnim);
+    unsigned int NextRotationIndex = RotationIndex + 1;
     assert(NextRotationIndex < pNodeAnim->mNumRotationKeys);
     float t1 = (float)pNodeAnim->mRotationKeys[RotationIndex].mTime;
     if (t1 > AnimationTimeTicks) {
@@ -1263,11 +1257,11 @@ void CoreModel::CalcInterpolatedRotation(aiQuaternion& Out, float AnimationTimeT
 }
 
 
-uint CoreModel::FindScaling(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim)
+unsigned int CoreModel::FindScaling(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim)
 {
     assert(pNodeAnim->mNumScalingKeys > 0);
 
-    for (uint i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++) {
+    for (unsigned int i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++) {
         float t = (float)pNodeAnim->mScalingKeys[i + 1].mTime;
         if (AnimationTimeTicks < t) {
             return i;
@@ -1286,8 +1280,8 @@ void CoreModel::CalcInterpolatedScaling(aiVector3D& Out, float AnimationTimeTick
         return;
     }
 
-    uint ScalingIndex = FindScaling(AnimationTimeTicks, pNodeAnim);
-    uint NextScalingIndex = ScalingIndex + 1;
+    unsigned int ScalingIndex = FindScaling(AnimationTimeTicks, pNodeAnim);
+    unsigned int NextScalingIndex = ScalingIndex + 1;
     assert(NextScalingIndex < pNodeAnim->mNumScalingKeys);
     float t1 = (float)pNodeAnim->mScalingKeys[ScalingIndex].mTime;
     if (t1 > AnimationTimeTicks) {
@@ -1306,11 +1300,11 @@ void CoreModel::CalcInterpolatedScaling(aiVector3D& Out, float AnimationTimeTick
 }
 
 
-void CoreModel::ReadNodeHierarchy(float AnimationTimeTicks, const aiNode* pNode, const Matrix4f& ParentTransform, const aiAnimation& Animation)
+void CoreModel::ReadNodeHierarchy(float AnimationTimeTicks, const aiNode* pNode, const glm::mat4& ParentTransform, const aiAnimation& Animation)
 {
     string NodeName(pNode->mName.data);
 
-    Matrix4f NodeTransformation(pNode->mTransformation);
+    glm::mat4 NodeTransformation(pNode->mTransformation);
 
     const aiNodeAnim* pNodeAnim = FindNodeAnim(Animation, NodeName);
 
@@ -1318,13 +1312,13 @@ void CoreModel::ReadNodeHierarchy(float AnimationTimeTicks, const aiNode* pNode,
         LocalTransform Transform;
         CalcLocalTransform(Transform, AnimationTimeTicks, pNodeAnim);
 
-        Matrix4f ScalingM;
+        glm::mat4 ScalingM;
         ScalingM.InitScaleTransform(Transform.Scaling.x, Transform.Scaling.y, Transform.Scaling.z);
         //        printf("Scaling %f %f %f\n", Transoform.Scaling.x, Transform.Scaling.y, Transform.Scaling.z);
 
-        Matrix4f RotationM = Matrix4f(Transform.Rotation.GetMatrix());
+        glm::mat4 RotationM = glm::mat4(Transform.Rotation.GetMatrix());
 
-        Matrix4f TranslationM;
+        glm::mat4 TranslationM;
         TranslationM.InitTranslationTransform(Transform.Translation.x, Transform.Translation.y, Transform.Translation.z);
         //        printf("Translation %f %f %f\n", Transform.Translation.x, Transform.Translation.y, Transform.Translation.z);
 
@@ -1332,14 +1326,14 @@ void CoreModel::ReadNodeHierarchy(float AnimationTimeTicks, const aiNode* pNode,
         NodeTransformation = TranslationM * RotationM * ScalingM;
     }
 
-    Matrix4f GlobalTransformation = ParentTransform * NodeTransformation;
+    glm::mat4 GlobalTransformation = ParentTransform * NodeTransformation;
 
     if (m_BoneNameToIndexMap.find(NodeName) != m_BoneNameToIndexMap.end()) {
-        uint BoneIndex = m_BoneNameToIndexMap[NodeName];
+        unsigned int BoneIndex = m_BoneNameToIndexMap[NodeName];
         m_BoneInfo[BoneIndex].FinalTransformation = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].OffsetMatrix;
     }
 
-    for (uint i = 0; i < pNode->mNumChildren; i++) {
+    for (unsigned int i = 0; i < pNode->mNumChildren; i++) {
         string ChildName(pNode->mChildren[i]->mName.data);
 
         map<string, NodeInfo>::iterator it = m_requiredNodeMap.find(ChildName);
@@ -1356,12 +1350,12 @@ void CoreModel::ReadNodeHierarchy(float AnimationTimeTicks, const aiNode* pNode,
 }
 
 
-void CoreModel::ReadNodeHierarchyBlended(float StartAnimationTimeTicks, float EndAnimationTimeTicks, const aiNode* pNode, const Matrix4f& ParentTransform,
+void CoreModel::ReadNodeHierarchyBlended(float StartAnimationTimeTicks, float EndAnimationTimeTicks, const aiNode* pNode, const glm::mat4& ParentTransform,
     const aiAnimation& StartAnimation, const aiAnimation& EndAnimation, float BlendFactor)
 {
     string NodeName(pNode->mName.data);
 
-    Matrix4f NodeTransformation(pNode->mTransformation);
+    glm::mat4 NodeTransformation(pNode->mTransformation);
 
     const aiNodeAnim* pStartNodeAnim = FindNodeAnim(StartAnimation, NodeName);
 
@@ -1390,7 +1384,7 @@ void CoreModel::ReadNodeHierarchyBlended(float StartAnimationTimeTicks, float En
         const aiVector3D& Scale0 = StartTransform.Scaling;
         const aiVector3D& Scale1 = EndTransform.Scaling;
         aiVector3D BlendedScaling = (1.0f - BlendFactor) * Scale0 + Scale1 * BlendFactor;
-        Matrix4f ScalingM;
+        glm::mat4 ScalingM;
         ScalingM.InitScaleTransform(BlendedScaling.x, BlendedScaling.y, BlendedScaling.z);
 
         // Interpolate rotation
@@ -1398,27 +1392,27 @@ void CoreModel::ReadNodeHierarchyBlended(float StartAnimationTimeTicks, float En
         const aiQuaternion& Rot1 = EndTransform.Rotation;
         aiQuaternion BlendedRot;
         aiQuaternion::Interpolate(BlendedRot, Rot0, Rot1, BlendFactor);
-        Matrix4f RotationM = Matrix4f(BlendedRot.GetMatrix());
+        glm::mat4 RotationM = glm::mat4(BlendedRot.GetMatrix());
 
         // Interpolate translation
         const aiVector3D& Pos0 = StartTransform.Translation;
         const aiVector3D& Pos1 = EndTransform.Translation;
         aiVector3D BlendedTranslation = (1.0f - BlendFactor) * Pos0 + Pos1 * BlendFactor;
-        Matrix4f TranslationM;
+        glm::mat4 TranslationM;
         TranslationM.InitTranslationTransform(BlendedTranslation.x, BlendedTranslation.y, BlendedTranslation.z);
 
         // Combine it all
         NodeTransformation = TranslationM * RotationM * ScalingM;
     }
 
-    Matrix4f GlobalTransformation = ParentTransform * NodeTransformation;
+    glm::mat4 GlobalTransformation = ParentTransform * NodeTransformation;
 
     if (m_BoneNameToIndexMap.find(NodeName) != m_BoneNameToIndexMap.end()) {
-        uint BoneIndex = m_BoneNameToIndexMap[NodeName];
+        unsigned int BoneIndex = m_BoneNameToIndexMap[NodeName];
         m_BoneInfo[BoneIndex].FinalTransformation = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].OffsetMatrix;
     }
 
-    for (uint i = 0; i < pNode->mNumChildren; i++) {
+    for (unsigned int i = 0; i < pNode->mNumChildren; i++) {
         string ChildName(pNode->mChildren[i]->mName.data);
 
         map<string, NodeInfo>::iterator it = m_requiredNodeMap.find(ChildName);
@@ -1444,14 +1438,14 @@ void CoreModel::CalcLocalTransform(LocalTransform& Transform, float AnimationTim
 }
 
 
-void CoreModel::GetBoneTransforms(float TimeInSeconds, vector<Matrix4f>& Transforms, unsigned int AnimationIndex)
+void CoreModel::GetBoneTransforms(float TimeInSeconds, vector<glm::mat4>& Transforms, unsigned int AnimationIndex)
 {
     if (AnimationIndex >= m_pScene->mNumAnimations) {
         printf("Invalid animation index %d, max is %d\n", AnimationIndex, m_pScene->mNumAnimations);
         assert(0);
     }
 
-    Matrix4f Identity;
+    glm::mat4 Identity;
     Identity.InitIdentity();
 
     float AnimationTimeTicks = CalcAnimationTimeTicks(TimeInSeconds, AnimationIndex);
@@ -1460,14 +1454,14 @@ void CoreModel::GetBoneTransforms(float TimeInSeconds, vector<Matrix4f>& Transfo
     ReadNodeHierarchy(AnimationTimeTicks, m_pScene->mRootNode, Identity, Animation);
     Transforms.resize(m_BoneInfo.size());
 
-    for (uint i = 0; i < m_BoneInfo.size(); i++) {
+    for (unsigned int i = 0; i < m_BoneInfo.size(); i++) {
         Transforms[i] = m_BoneInfo[i].FinalTransformation;
     }
 }
 
 
 void CoreModel::GetBoneTransformsBlended(float TimeInSeconds,
-    vector<Matrix4f>& BlendedTransforms,
+    vector<glm::mat4>& BlendedTransforms,
     unsigned int StartAnimIndex,
     unsigned int EndAnimIndex,
     float BlendFactor)
@@ -1493,14 +1487,14 @@ void CoreModel::GetBoneTransformsBlended(float TimeInSeconds,
     const aiAnimation& StartAnimation = *m_pScene->mAnimations[StartAnimIndex];
     const aiAnimation& EndAnimation = *m_pScene->mAnimations[EndAnimIndex];
 
-    Matrix4f Identity;
+    glm::mat4 Identity;
     Identity.InitIdentity();
 
     ReadNodeHierarchyBlended(StartAnimationTimeTicks, EndAnimationTimeTicks, m_pScene->mRootNode, Identity, StartAnimation, EndAnimation, BlendFactor);
 
     BlendedTransforms.resize(m_BoneInfo.size());
 
-    for (uint i = 0; i < m_BoneInfo.size(); i++) {
+    for (unsigned int i = 0; i < m_BoneInfo.size(); i++) {
         BlendedTransforms[i] = m_BoneInfo[i].FinalTransformation;
     }
 }
@@ -1521,7 +1515,7 @@ float CoreModel::CalcAnimationTimeTicks(float TimeInSeconds, unsigned int Animat
 const aiNodeAnim* CoreModel::FindNodeAnim(const aiAnimation&
     Animation, const string& NodeName)
 {
-    for (uint i = 0; i < Animation.mNumChannels; i++) {
+    for (unsigned int i = 0; i < Animation.mNumChannels; i++) {
         const aiNodeAnim* pNodeAnim = Animation.mChannels[i];
 
         if (string(pNodeAnim->mNodeName.data) == NodeName) {

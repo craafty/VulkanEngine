@@ -75,6 +75,8 @@ namespace Engine {
 
 		void CreateTexture(const char* filename, VulkanTexture& Tex);
 
+		void CreateTextureFromData(const void* pPixels, int ImageWidth, int ImageHeight, VulkanTexture& Tex);
+
 	private:
 
 		void CreateInstance(const char* pAppName);

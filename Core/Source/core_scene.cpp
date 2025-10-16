@@ -1,5 +1,5 @@
-#include "Int/core_scene.h"
-#include "Int/core_rendering_system.h"
+#include "core_scene.h"
+#include "core_rendering_system.h"
 
 #define NUM_SCENE_OBJECTS 1024
 
@@ -8,7 +8,7 @@ SceneObject::SceneObject()
     memset(&m_rotations[0], 0, sizeof(m_rotations));
 }
 
-void SceneObject::SetRotation(const Vector3f& Rot)
+void SceneObject::SetRotation(const glm::vec3& Rot)
 {
     m_rotations[0] = Rot;
     m_numRotations = 1;
@@ -32,7 +32,7 @@ void SceneObject::RotateBy(float x, float y, float z)
 }
 
 
-void SceneObject::PushRotation(const Vector3f& Rot)
+void SceneObject::PushRotation(const glm::vec3& Rot)
 {
     if (m_numRotations >= MAX_NUM_ROTATIONS) {
         printf("Exceeded max number of rotations - %d\n", m_numRotations);
@@ -50,12 +50,12 @@ bool QuaternionIsZero(const glm::quat& q)
     return r;
 }
 
-Matrix4f SceneObject::GetMatrix() const
+glm::mat4 SceneObject::GetMatrix() const
 {
-    Matrix4f Scale;
+    glm::mat4 Scale;
     Scale.InitScaleTransform(m_scale);
 
-    Matrix4f Rotation;
+    glm::mat4 Rotation;
 
     if (QuaternionIsZero(m_quaternion)) {
         CalcRotationStack(Rotation);
@@ -64,16 +64,16 @@ Matrix4f SceneObject::GetMatrix() const
         Rotation.InitRotateTransform(m_quaternion);
     }
 
-    Matrix4f Translation;
+    glm::mat4 Translation;
     Translation.InitTranslationTransform(m_pos);
 
-    Matrix4f WorldTransformation = Translation * Rotation * Scale;
+    glm::mat4 WorldTransformation = Translation * Rotation * Scale;
 
     return WorldTransformation;
 }
 
 
-void SceneObject::CalcRotationStack(Matrix4f& Rot) const
+void SceneObject::CalcRotationStack(glm::mat4& Rot) const
 {
     if (m_numRotations == 0) {
         Rot.InitIdentity();
@@ -86,7 +86,7 @@ void SceneObject::CalcRotationStack(Matrix4f& Rot) const
             assert(0);
         }
         for (int i = 1; i < m_numRotations; i++) {
-            Matrix4f r;
+            glm::mat4 r;
             r.InitRotateTransform(m_rotations[i]);
             Rot = r * Rot;
         }
@@ -101,7 +101,7 @@ SceneConfig::SceneConfig()
 
 
 
-Scene::Scene()
+IScene::IScene()
 {
 }
 
@@ -132,17 +132,17 @@ void CoreScene::InitializeDefault()
 {
     SceneObject* pSceneObject = CreateSceneObject("square");
     AddToRenderList(pSceneObject);
-    pSceneObject->SetRotation(Vector3f(-90.0f, 0.0f, 0.0f));
-    pSceneObject->SetScale(Vector3f(1000.0f, 1000.0f, 1000.0f));
-    pSceneObject->SetFlatColor(Vector4f(0.5f, 0.5f, 0.5f, 1.0f));
+    pSceneObject->SetRotation(glm::vec3(-90.0f, 0.0f, 0.0f));
+    pSceneObject->SetScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
+    pSceneObject->SetFlatColor(glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
 }
 
 
 void CoreScene::CreateDefaultCamera()
 {
-    Vector3f Pos(0.0f, 0.0f, 0.0f);
-    Vector3f Target(0.0f, 0.f, 1.0f);
-    Vector3f Up(0.0, 1.0f, 0.0f);
+    glm::vec3 Pos(0.0f, 0.0f, 0.0f);
+    glm::vec3 Target(0.0f, 0.f, 1.0f);
+    glm::vec3 Up(0.0, 1.0f, 0.0f);
 
     float FOV = 45.0f;
     float zNear = 0.1f;
@@ -153,12 +153,12 @@ void CoreScene::CreateDefaultCamera()
 
     PersProjInfo persProjInfo = { FOV, (float)WindowWidth, (float)WindowHeight, zNear, zFar };
 
-    Vector3f Center = Pos + Target;
+    glm::vec3 Center = Pos + Target;
     m_defaultCamera.Init(Pos.ToGLM(), Center.ToGLM(), Up.ToGLM(), persProjInfo);
 }
 
 
-void CoreScene::SetCamera(const Vector3f& Pos, const Vector3f& Target)
+void CoreScene::SetCamera(const glm::vec3& Pos, const glm::vec3& Target)
 {
     m_defaultCamera.SetPos(Pos.ToGLM());
     m_defaultCamera.SetTarget(Target.ToGLM());
@@ -214,7 +214,7 @@ std::list<SceneObject*> CoreScene::GetSceneObjectsList()
 }
 
 
-SceneObject* CoreScene::CreateSceneObject(Model* pModel)
+SceneObject* CoreScene::CreateSceneObject(IModel* pModel)
 {
     if (m_numSceneObjects == NUM_SCENE_OBJECTS) {
         printf("%s:%d - out of scene objects space\n", __FILE__, __LINE__);

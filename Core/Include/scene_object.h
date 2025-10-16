@@ -3,7 +3,7 @@
 #include <string>
 
 
-class Object
+class SceneObjectBase
 {
 public:
     void SetName(const std::string& Name) { m_name = Name; }
@@ -11,7 +11,7 @@ public:
     const std::string GetName() const { return m_name; }
 
 protected:
-    Object() {}
+    SceneObjectBase() {}
 
 private:
     std::string m_name = "unnamed_object";

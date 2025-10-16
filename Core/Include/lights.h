@@ -1,9 +1,11 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 class BaseLight
 {
 public:
-    Vector3f Color = Vector3f(1.0f, 1.0f, 1.0f);
+    glm::vec3 Color = glm::vec3(1.0f, 1.0f, 1.0f);
     float AmbientIntensity = 0.0f;
     float DiffuseIntensity = 0.0f;
 
@@ -17,8 +19,8 @@ public:
 class DirectionalLight : public BaseLight
 {
 public:
-    Vector3f WorldDirection = Vector3f(0.0f, 0.0f, 0.0f);
-    Vector3f Up = Vector3f(0.0f, 1.0f, 0.0f);
+    glm::vec3 WorldDirection = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
 };
 
 
@@ -33,7 +35,7 @@ struct LightAttenuation
 class PointLight : public BaseLight
 {
 public:
-    Vector3f WorldPosition = Vector3f(0.0f, 0.0f, 0.0f);
+    glm::vec3 WorldPosition = glm::vec3(0.0f, 0.0f, 0.0f);
     LightAttenuation Attenuation;
 };
 
@@ -41,13 +43,13 @@ public:
 class SpotLight : public PointLight
 {
 public:
-    Vector3f WorldDirection = Vector3f(0.0f, 0.0f, 0.0f);
-    Vector3f Up = Vector3f(0.0f, 1.0f, 0.0f);
+    glm::vec3 WorldDirection = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
     float Cutoff = 0.0f;
 };
 
 
 struct PBRLight {
-    Vector4f PosDir;   // if w == 1 position, else direction
-    Vector3f Intensity;
+    glm::vec4 PosDir; // if w == 1 position, else direction
+    glm::vec3 Intensity;
 };

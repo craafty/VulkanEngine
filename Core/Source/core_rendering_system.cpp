@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "Int/core_rendering_system.h"
-#include "Int/core_scene.h"
-#include "GL/gl_rendering_system.h"
+#include "core_rendering_system.h"
+#include "core_scene.h"
 
 #define NUM_MODELS 1024
 
@@ -30,7 +29,7 @@ CoreRenderingSystem::~CoreRenderingSystem()
 }
 
 
-RenderingSystem* RenderingSystem::CreateRenderingSystem(RENDERING_SYSTEM RenderingSystem, GameCallbacks* pGameCallbacks, bool LoadBasicShapes)
+IRenderingSystem* IRenderingSystem::CreateRenderingSystem(RENDERING_SYSTEM RenderingSystem, GameCallbacks* pGameCallbacks, bool LoadBasicShapes)
 {
     if (g_pRenderingSystem) {
         printf("%s:%d - rendering system already exists\n", __FILE__, __LINE__);
@@ -79,7 +78,7 @@ void CoreRenderingSystem::InitializeBasicShapes()
 }
 
 
-Scene* CoreRenderingSystem::CreateScene(const std::string& Filename)
+IScene* CoreRenderingSystem::CreateScene(const std::string& Filename)
 {
     CoreScene* pScene = (CoreScene*)CreateEmptyScene();
     pScene->LoadScene(Filename);
@@ -87,7 +86,7 @@ Scene* CoreRenderingSystem::CreateScene(const std::string& Filename)
 }
 
 
-Scene* CoreRenderingSystem::CreateDefaultScene()
+IScene* CoreRenderingSystem::CreateDefaultScene()
 {
     CoreScene* pScene = (CoreScene*)CreateEmptyScene();
     pScene->InitializeDefault();
@@ -95,7 +94,7 @@ Scene* CoreRenderingSystem::CreateDefaultScene()
 }
 
 
-void CoreRenderingSystem::SetScene(Scene* pScene)
+void CoreRenderingSystem::SetScene(IScene* pScene)
 {
     m_pScene = (CoreScene*)pScene;
     m_pCamera = m_pScene->GetCurrentCamera();
@@ -103,13 +102,13 @@ void CoreRenderingSystem::SetScene(Scene* pScene)
 }
 
 
-Scene* CoreRenderingSystem::GetScene()
+IScene* CoreRenderingSystem::GetScene()
 {
     return m_pScene;
 }
 
 
-Model* CoreRenderingSystem::LoadModel(const std::string& Filename)
+IModel* CoreRenderingSystem::LoadModel(const std::string& Filename)
 {
     if (m_numModels == m_models.size()) {
         printf("%s:%d: out of models space\n", __FILE__, __LINE__);
@@ -155,14 +154,14 @@ Grid* CoreRenderingSystem::CreateGrid(int Width, int Depth)
 }
 
 
-Model* CoreRenderingSystem::GetModel(const std::string& BasicShape)
+IModel* CoreRenderingSystem::GetModel(const std::string& BasicShape)
 {
     if (m_shapeToModel.find(BasicShape) == m_shapeToModel.end()) {
         printf("%s:%d - cannot find basic shape %s\n", __FILE__, __LINE__, BasicShape.c_str());
         exit(0);
     }
 
-    Model* pModel = m_shapeToModel[BasicShape];
+    IModel* pModel = m_shapeToModel[BasicShape];
 
     return pModel;
 }
