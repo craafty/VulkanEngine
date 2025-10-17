@@ -8,6 +8,7 @@
 #include "vulkan_util.h"
 #include "vulkan_device.h"
 #include "vulkan_queue.h"
+#include "vulkan_texture.h"
 
 namespace Engine {
 
@@ -21,19 +22,6 @@ namespace Engine {
 		VkDeviceSize m_allocationSize = 0;
 
 		void Update(VkDevice Device, const void* pData, size_t Size);
-
-		void Destroy(VkDevice Device);
-	};
-
-
-	class VulkanTexture {
-	public:
-		VulkanTexture() {}
-
-		VkImage m_image = VK_NULL_HANDLE;
-		VkDeviceMemory m_mem = VK_NULL_HANDLE;
-		VkImageView m_view = VK_NULL_HANDLE;
-		VkSampler m_sampler = VK_NULL_HANDLE;
 
 		void Destroy(VkDevice Device);
 	};

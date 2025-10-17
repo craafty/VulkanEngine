@@ -4,9 +4,9 @@
 #include <vector>
 #include <string>
 
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>       // Output data structure
-#include <assimp/postprocess.h> // Post processing flags
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -16,6 +16,8 @@
 #include "camera.h"
 #include "lights.h"
 #include "model_interface.h"
+#include "basic_mesh_entry.h"
+#include "vulkan_texture.h"
 
 
 class DemolitionRenderCallbacks
@@ -97,15 +99,6 @@ protected:
         glm::vec3 Normal;
         glm::vec3 Tangent;
         glm::vec3 Bitangent;
-
-        void Print()
-        {
-            Position.Print();
-            TexCoords.Print();
-            Normal.Print();
-            Tangent.Print();
-            Bitangent.Print();
-        }
     };
 
 #define MAX_NUM_BONES_PER_VERTEX 4
@@ -162,7 +155,7 @@ protected:
     std::vector<Material> m_Materials;
 
     // Temporary space for vertex stuff before we load them into the GPU
-    vector<unsigned int> m_Indices;
+    std::vector<unsigned int> m_Indices;
 
     CoreRenderingSystem* m_pCoreRenderingSystem = NULL;
 
@@ -172,20 +165,20 @@ private:
     void ReserveSpace(std::vector<VertexType>& Vertices, unsigned int NumVertices, unsigned int NumIndices);
 
     template<typename VertexType>
-    void InitSingleMesh(vector<VertexType>& Vertices, unsigned int MeshIndex, const aiMesh* paiMesh);
+    void InitSingleMesh(std::vector<VertexType>& Vertices, unsigned int MeshIndex, const aiMesh* paiMesh);
 
     template<typename VertexType>
-    void InitSingleMeshOpt(vector<VertexType>& Vertices, unsigned int MeshIndex, const aiMesh* paiMesh);
+    void InitSingleMeshOpt(std::vector<VertexType>& Vertices, unsigned int MeshIndex, const aiMesh* paiMesh);
 
-    virtual void PopulateBuffersSkinned(vector<SkinnedVertex>& Vertices) = 0;
+    virtual void PopulateBuffersSkinned(std::vector<SkinnedVertex>& Vertices) = 0;
 
-    virtual void PopulateBuffers(vector<Vertex>& Vertices) = 0;
+    virtual void PopulateBuffers(std::vector<Vertex>& Vertices) = 0;
 
     unsigned int CountValidFaces(const aiMesh& Mesh);
 
     bool InitFromScene(const aiScene* pScene, const std::string& Filename);
 
-    bool InitGeometry(const aiScene* pScene, const string& Filename);
+    bool InitGeometry(const aiScene* pScene, const std::string& Filename);
 
     template<typename VertexType>
     void InitGeometryInternal(std::vector<VertexType>& Vertices, int NumVertices, int NumIndices);
@@ -213,19 +206,19 @@ private:
 
     bool InitMaterials(const aiScene* pScene, const std::string& Filename);
 
-    void LoadTextures(const string& Dir, const aiMaterial* pMaterial, int index);
+    void LoadTextures(const std::string& Dir, const aiMaterial* pMaterial, int index);
 
-    void LoadDiffuseTexture(const string& Dir, const aiMaterial* pMaterial, int index);
+    void LoadDiffuseTexture(const std::string& Dir, const aiMaterial* pMaterial, int index);
     void LoadDiffuseTextureEmbedded(const aiTexture* paiTexture, int MaterialIndex);
-    void LoadDiffuseTextureFromFile(const string& dir, const aiString& Path, int MaterialIndex);
+    void LoadDiffuseTextureFromFile(const std::string& dir, const aiString& Path, int MaterialIndex);
 
-    void LoadSpecularTexture(const string& Dir, const aiMaterial* pMaterial, int index);
+    void LoadSpecularTexture(const std::string& Dir, const aiMaterial* pMaterial, int index);
     void LoadSpecularTextureEmbedded(const aiTexture* paiTexture, int MaterialIndex);
-    void LoadSpecularTextureFromFile(const string& dir, const aiString& Path, int MaterialIndex);
+    void LoadSpecularTextureFromFile(const std::string& dir, const aiString& Path, int MaterialIndex);
 
-    void LoadNormalTexture(const string& Dir, const aiMaterial* pMaterial, int index);
+    void LoadNormalTexture(const std::string& Dir, const aiMaterial* pMaterial, int index);
     void LoadNormalTextureEmbedded(const aiTexture* paiTexture, int MaterialIndex);
-    void LoadNormalTextureFromFile(const string& dir, const aiString& Path, int MaterialIndex);
+    void LoadNormalTextureFromFile(const std::string& dir, const aiString& Path, int MaterialIndex);
 
     void LoadColors(const aiMaterial* pMaterial, int index);
 
@@ -235,7 +228,7 @@ private:
 
     const aiScene* m_pScene = NULL;
 
-    glm::mat4 m_GlobalInverseTransform;
+    glm::mat4 m_GlobalInverseTransform = glm::mat4(1.0f);
 
     Assimp::Importer m_Importer;
 
@@ -252,8 +245,8 @@ private:
     // Skeletal animation stuff
     /////////////////////////////////////
 
-    void LoadMeshBones(vector<SkinnedVertex>& SkinnedVertices, unsigned int MeshIndex, const aiMesh* paiMesh);
-    void LoadSingleBone(vector<SkinnedVertex>& SkinnedVertices, unsigned int MeshIndex, const aiBone* pBone);
+    void LoadMeshBones(std::vector<SkinnedVertex>& SkinnedVertices, unsigned int MeshIndex, const aiMesh* paiMesh);
+    void LoadSingleBone(std::vector<SkinnedVertex>& SkinnedVertices, unsigned int MeshIndex, const aiBone* pBone);
     int GetBoneId(const aiBone* pBone);
     void CalcInterpolatedScaling(aiVector3D& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
     void CalcInterpolatedRotation(aiQuaternion& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
@@ -261,7 +254,7 @@ private:
     unsigned int FindScaling(float AnimationTime, const aiNodeAnim* pNodeAnim);
     unsigned int FindRotation(float AnimationTime, const aiNodeAnim* pNodeAnim);
     unsigned int FindPosition(float AnimationTime, const aiNodeAnim* pNodeAnim);
-    const aiNodeAnim* FindNodeAnim(const aiAnimation& Animation, const string& NodeName);
+    const aiNodeAnim* FindNodeAnim(const aiAnimation& Animation, const std::string& NodeName);
     void ReadNodeHierarchy(float AnimationTime, const aiNode* pNode, const glm::mat4& ParentTransform, const aiAnimation& Animation);
     void ReadNodeHierarchyBlended(float StartAnimationTimeTicksm, float EndAnimationTimeTicks, const aiNode* pNode, const glm::mat4& ParentTransform,
         const aiAnimation& StartAnimation, const aiAnimation& EndAnimation, float BlendFactor);
@@ -277,7 +270,7 @@ private:
 
     void CalcLocalTransform(LocalTransform& Transform, float AnimationTimeTicks, const aiNodeAnim* pNodeAnim);
 
-    map<string, unsigned int> m_BoneNameToIndexMap;
+    std::map<std::string, unsigned int> m_BoneNameToIndexMap;
 
     struct BoneInfo
     {
@@ -287,11 +280,11 @@ private:
         BoneInfo(const glm::mat4& Offset)
         {
             OffsetMatrix = Offset;
-            FinalTransformation.SetZero();
+            FinalTransformation = glm::mat4(0.0f);
         }
     };
 
-    vector<BoneInfo> m_BoneInfo;
+    std::vector<BoneInfo> m_BoneInfo;
 
     struct NodeInfo {
 
@@ -303,5 +296,5 @@ private:
         bool isRequired = false;
     };
 
-    map<string, NodeInfo> m_requiredNodeMap;
+    std::map<std::string, NodeInfo> m_requiredNodeMap;
 };

@@ -52,8 +52,7 @@ bool QuaternionIsZero(const glm::quat& q)
 
 glm::mat4 SceneObject::GetMatrix() const
 {
-    glm::mat4 Scale;
-    Scale.InitScaleTransform(m_scale);
+    glm::mat4 Scale = glm::scale(glm::mat4(1.0f), m_scale);
 
     glm::mat4 Rotation;
 
@@ -61,11 +60,10 @@ glm::mat4 SceneObject::GetMatrix() const
         CalcRotationStack(Rotation);
     }
     else {
-        Rotation.InitRotateTransform(m_quaternion);
+        Rotation = glm::mat4_cast(m_quaternion);
     }
 
-    glm::mat4 Translation;
-    Translation.InitTranslationTransform(m_pos);
+    glm::mat4 Translation = glm::translate(glm::mat4(1.0f), m_pos);
 
     glm::mat4 WorldTransformation = Translation * Rotation * Scale;
 
@@ -76,18 +74,17 @@ glm::mat4 SceneObject::GetMatrix() const
 void SceneObject::CalcRotationStack(glm::mat4& Rot) const
 {
     if (m_numRotations == 0) {
-        Rot.InitIdentity();
+        Rot = glm::mat4(1.0f);
     }
     else {
-        Rot.InitRotateTransform(m_rotations[0]);
+        Rot = glm::mat4_cast(glm::quat(glm::radians(m_rotations[0])));
 
         if (m_numRotations > MAX_NUM_ROTATIONS) {
             printf("Invalid number of rotations - %d\n", m_numRotations);
             assert(0);
         }
         for (int i = 1; i < m_numRotations; i++) {
-            glm::mat4 r;
-            r.InitRotateTransform(m_rotations[i]);
+            glm::mat4 r = glm::mat4_cast(glm::quat(glm::radians(m_rotations[i])));
             Rot = r * Rot;
         }
     }
@@ -153,15 +150,14 @@ void CoreScene::CreateDefaultCamera()
 
     PersProjInfo persProjInfo = { FOV, (float)WindowWidth, (float)WindowHeight, zNear, zFar };
 
-    glm::vec3 Center = Pos + Target;
-    m_defaultCamera.Init(Pos.ToGLM(), Center.ToGLM(), Up.ToGLM(), persProjInfo);
+    m_defaultCamera.Init(Pos, persProjInfo);
 }
 
 
 void CoreScene::SetCamera(const glm::vec3& Pos, const glm::vec3& Target)
 {
-    m_defaultCamera.SetPos(Pos.ToGLM());
-    m_defaultCamera.SetTarget(Target.ToGLM());
+    m_defaultCamera.SetPos(Pos);
+    m_defaultCamera.SetTarget(Target);
     m_defaultCamera.SetUp(glm::vec3(0.0f, 1.0f, 0.0f));
 }
 

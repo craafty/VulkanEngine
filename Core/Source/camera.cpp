@@ -48,6 +48,22 @@ void Camera::Update(float dt) {
     m_position += m_velocity * dt;
 }
 
+void Camera::SetPos(const glm::vec3& pos)
+{
+    m_position = pos;
+}
+
+void Camera::SetTarget(const glm::vec3& target)
+{
+    glm::vec3 forward = glm::normalize(target - m_position);
+    m_pitch = glm::degrees(asin(forward.y));
+    m_heading = glm::degrees(atan2(-forward.x, -forward.z));
+}
+
+void Camera::SetUp(const glm::vec3& up)
+{
+}
+
 
 void Camera::SetMousePos(float x, float y) {
     m_currentMousePos = { x, y };

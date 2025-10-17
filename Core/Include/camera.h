@@ -1,7 +1,5 @@
 #pragma once
 
-#define GLM_ENABLE_EXPERIMENTAL
-
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -32,6 +30,10 @@ public:
     void Init(const glm::vec3& pos, const PersProjInfo& projInfo);
     void Update(float dt);
     void SetMousePos(float x, float y);
+
+    void SetPos(const glm::vec3& pos);
+    void SetTarget(const glm::vec3& target);
+    void SetUp(const glm::vec3& up);
 
     glm::mat4 GetViewMatrix() const;
     glm::mat4 GetVPMatrix() const;

@@ -75,8 +75,8 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Include;..\Vendor\glfw-3.4\include;..\Vendor\glm;..\Vendor\stb;..\Vendor\assimp\include;..\Vendor\meshoptimizer;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>Include;..\Vendor\glfw-3.4\include;..\Vendor\glm;..\Vendor\stb;..\Vendor\assimp\include;..\Vendor\assimp\build\include;..\Vendor\meshoptimizer\src;..\Vendor\assimp\contrib\zlib;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -89,16 +89,16 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;SPIRVd.lib;SPIRV-Toolsd.lib;SPIRV-Tools-diffd.lib;SPIRV-Tools-optd.lib;glslangd.lib;OSDependentd.lib;GenericCodeGend.lib;MachineIndependentd.lib;glslang-default-resource-limitsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\Vendor\glfw-3.4\lib;C:\VulkanSDK\1.4.321.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;SPIRVd.lib;SPIRV-Toolsd.lib;SPIRV-Tools-diffd.lib;SPIRV-Tools-optd.lib;glslangd.lib;OSDependentd.lib;GenericCodeGend.lib;MachineIndependentd.lib;glslang-default-resource-limitsd.lib;assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\Vendor\glfw-3.4\lib;..\Vendor\assimp\build\lib;C:\VulkanSDK\1.4.321.1\Lib;..\Vendor\assimp\build\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Include;..\Vendor\glfw-3.4\include;..\Vendor\glm;..\Vendor\stb;..\Vendor\assimp\include;..\Vendor\meshoptimizer;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>Include;..\Vendor\glfw-3.4\include;..\Vendor\glm;..\Vendor\stb;..\Vendor\assimp\include;..\Vendor\assimp\build\include;..\Vendor\meshoptimizer\src;..\Vendor\assimp\contrib\zlib;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -117,16 +117,16 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;SPIRVd.lib;SPIRV-Toolsd.lib;SPIRV-Tools-diffd.lib;SPIRV-Tools-optd.lib;glslangd.lib;OSDependentd.lib;GenericCodeGend.lib;MachineIndependentd.lib;glslang-default-resource-limitsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\Vendor\glfw-3.4\lib;C:\VulkanSDK\1.4.321.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;SPIRVd.lib;SPIRV-Toolsd.lib;SPIRV-Tools-diffd.lib;SPIRV-Tools-optd.lib;glslangd.lib;OSDependentd.lib;GenericCodeGend.lib;MachineIndependentd.lib;glslang-default-resource-limitsd.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\Vendor\glfw-3.4\lib;..\Vendor\assimp\build\lib;C:\VulkanSDK\1.4.321.1\Lib;..\Vendor\assimp\build\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Include;..\Vendor\glfw-3.4\include;..\Vendor\glm;..\Vendor\stb;..\Vendor\assimp\include;..\Vendor\meshoptimizer;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>Include;..\Vendor\glfw-3.4\include;..\Vendor\glm;..\Vendor\stb;..\Vendor\assimp\include;..\Vendor\assimp\build\include;..\Vendor\meshoptimizer\src;..\Vendor\assimp\contrib\zlib;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -145,10 +145,37 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;SPIRVd.lib;SPIRV-Toolsd.lib;SPIRV-Tools-diffd.lib;SPIRV-Tools-optd.lib;glslangd.lib;OSDependentd.lib;GenericCodeGend.lib;MachineIndependentd.lib;glslang-default-resource-limitsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\Vendor\glfw-3.4\lib;C:\VulkanSDK\1.4.321.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;SPIRVd.lib;SPIRV-Toolsd.lib;SPIRV-Tools-diffd.lib;SPIRV-Tools-optd.lib;glslangd.lib;OSDependentd.lib;GenericCodeGend.lib;MachineIndependentd.lib;glslang-default-resource-limitsd.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\Vendor\glfw-3.4\lib;..\Vendor\assimp\build\lib;C:\VulkanSDK\1.4.321.1\Lib;..\Vendor\assimp\build\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\basic_mesh_entry.h" />
+    <ClInclude Include="Include\camera.h" />
+    <ClInclude Include="Include\camera_handler.h" />
+    <ClInclude Include="Include\core_model.h" />
+    <ClInclude Include="Include\core_rendering_system.h" />
+    <ClInclude Include="Include\core_scene.h" />
+    <ClInclude Include="Include\lights.h" />
+    <ClInclude Include="Include\material.h" />
+    <ClInclude Include="Include\model_desc.h" />
+    <ClInclude Include="Include\model_interface.h" />
+    <ClInclude Include="Include\rendering_system_interface.h" />
+    <ClInclude Include="Include\scene_interface.h" />
+    <ClInclude Include="Include\scene_object.h" />
+    <ClInclude Include="Include\util.h" />
+    <ClInclude Include="Include\vulkan_core.h" />
+    <ClInclude Include="Include\vulkan_device.h" />
+    <ClInclude Include="Include\vulkan_glfw.h" />
+    <ClInclude Include="Include\vulkan_graphics_pipeline.h" />
+    <ClInclude Include="Include\vulkan_model.h" />
+    <ClInclude Include="Include\vulkan_queue.h" />
+    <ClInclude Include="Include\vulkan_shader.h" />
+    <ClInclude Include="Include\vulkan_simple_mesh.h" />
+    <ClInclude Include="Include\vulkan_texture.h" />
+    <ClInclude Include="Include\vulkan_util.h" />
+    <ClInclude Include="Include\vulkan_wrapper.h" />
+  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\camera.cpp" />
     <ClCompile Include="Source\camera_handler.cpp" />
@@ -166,32 +193,6 @@
     <ClCompile Include="Source\vulkan_texture.cpp" />
     <ClCompile Include="Source\vulkan_util.cpp" />
     <ClCompile Include="Source\vulkan_wrapper.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Include\camera.h" />
-    <ClInclude Include="Include\camera_handler.h" />
-    <ClInclude Include="Include\lights.h" />
-    <ClInclude Include="Include\model_interface.h" />
-    <ClInclude Include="Include\scene_object.h" />
-    <ClInclude Include="Include\rendering_system_interface.h" />
-    <ClInclude Include="Include\scene_interface.h" />
-    <ClInclude Include="Include\core_model.h" />
-    <ClInclude Include="Include\core_rendering_system.h" />
-    <ClInclude Include="Include\core_scene.h" />
-    <ClInclude Include="Include\model_desc.h" />
-    <ClInclude Include="Include\material.h" />
-    <ClInclude Include="Include\util.h" />
-    <ClInclude Include="Include\vulkan_core.h" />
-    <ClInclude Include="Include\vulkan_device.h" />
-    <ClInclude Include="Include\vulkan_glfw.h" />
-    <ClInclude Include="Include\vulkan_graphics_pipeline.h" />
-    <ClInclude Include="Include\vulkan_model.h" />
-    <ClInclude Include="Include\vulkan_queue.h" />
-    <ClInclude Include="Include\vulkan_shader.h" />
-    <ClInclude Include="Include\vulkan_simple_mesh.h" />
-    <ClInclude Include="Include\vulkan_texture.h" />
-    <ClInclude Include="Include\vulkan_util.h" />
-    <ClInclude Include="Include\vulkan_wrapper.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

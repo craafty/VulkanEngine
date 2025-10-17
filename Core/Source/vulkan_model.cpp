@@ -1,8 +1,13 @@
+#ifdef _WIN32
+	#include <windows.h>
+#endif
+
 #include <vulkan/vulkan.h>
 
 #include "vulkan_core.h"
 #include "vulkan_model.h"
 #include "vulkan_graphics_pipeline.h"
+#include "util.h"
 
 namespace Engine {
 
@@ -124,8 +129,7 @@ namespace Engine {
 		std::vector<glm::mat4> Transformations(m_Meshes.size());
 
 		for (uint32_t SubmeshIndex = 0; SubmeshIndex < Transformations.size(); SubmeshIndex++) {
-			glm::mat4 MeshTransform = glm::make_mat4(m_Meshes[SubmeshIndex].Transformation.data());
-			MeshTransform = glm::transpose(MeshTransform);
+			glm::mat4 MeshTransform = m_Meshes[SubmeshIndex].Transformation;
 			Transformations[SubmeshIndex] = Transformation * MeshTransform;
 		}
 

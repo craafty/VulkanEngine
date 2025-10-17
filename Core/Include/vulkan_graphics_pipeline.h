@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "vulkan_core.h"
-#include "Int/model_desc.h"
+#include "model_desc.h"
 
 namespace Engine {
 

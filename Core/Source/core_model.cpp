@@ -1,11 +1,16 @@
+#include <glm/gtx/string_cast.hpp>
 #include "core_rendering_system.h"
 #include "core_model.h"
-#include "src/meshoptimizer.h"
+#include "util.h"
+#include "meshoptimizer.h"
+#include <algorithm>
 
 using namespace std;
 
 // config flags
 static bool UseMeshOptimizer = false;
+
+#define MAX_BONES 100
 
 #define DEMOLITION_ASSIMP_LOAD_FLAGS (aiProcess_JoinIdenticalVertices | \
                                       aiProcess_Triangulate | \
@@ -36,6 +41,16 @@ inline glm::mat4 AssimpToGLM(const aiMatrix4x4& from) {
     return to;
 }
 
+static inline glm::vec3 VectorFromAssimpVector(const aiVector3D& v)
+{
+    return glm::vec3(v.x, v.y, v.z);
+}
+
+static inline float ToDegree(float radians)
+{
+    return radians * 180.0f / 3.1415926535f;
+}
+
 
 bool CoreModel::LoadAssimpModel(const string& Filename)
 {
@@ -49,18 +64,12 @@ bool CoreModel::LoadAssimpModel(const string& Filename)
         printf("--- START Node Hierarchy ---\n");
         traverse(0, m_pScene->mRootNode);
         printf("--- END Node Hierarchy ---\n");
-        m_GlobalInverseTransform = m_pScene->mRootNode->mTransformation;
-        m_GlobalInverseTransform = m_GlobalInverseTransform.Inverse();
+        m_GlobalInverseTransform = glm::inverse(AssimpToGLM(m_pScene->mRootNode->mTransformation));
         Ret = InitFromScene(m_pScene, Filename);
     }
     else {
         printf("Error parsing '%s': '%s'\n", Filename.c_str(), m_Importer.GetErrorString());
     }
-
-#ifndef OGLDEV_VULKAN // TODO: move to GLModel using virtual function
-    // Make sure the VAO is not changed from the outside
-    glBindVertexArray(0);
-#endif
 
     return Ret;
 }
@@ -123,8 +132,8 @@ void CoreModel::InitGeometryInternal(std::vector<VertexType>& Vertices, int NumV
 
     InitAllMeshes<VertexType>(m_pScene, Vertices);
 
-    printf("Min pos: "); m_minPos.Print();
-    printf("Max pos: "); m_maxPos.Print();
+    printf("Min pos: %s\n", glm::to_string(m_minPos).c_str());
+    printf("Max pos: %s\n", glm::to_string(m_maxPos).c_str());
 }
 
 
@@ -189,8 +198,7 @@ void CoreModel::CalculateMeshTransformations(const aiScene* pScene)
 {
     printf("----------------------------------------\n");
     printf("Calculating mesh transformations\n");
-    glm::mat4 Transformation;
-    Transformation.InitIdentity();
+    glm::mat4 Transformation(1.0f);
 
     TraverseNodeHierarchy(Transformation, pScene->mRootNode);
 }
@@ -199,12 +207,9 @@ void CoreModel::CalculateMeshTransformations(const aiScene* pScene)
 void CoreModel::TraverseNodeHierarchy(glm::mat4 ParentTransformation, aiNode* pNode)
 {
     printf("Traversing node '%s'\n", pNode->mName.C_Str());
-    glm::mat4 NodeTransformation(pNode->mTransformation);
+    glm::mat4 NodeTransformation = AssimpToGLM(pNode->mTransformation);
 
     glm::mat4 CombinedTransformation = ParentTransformation * NodeTransformation;
-
-    printf("Combined transformation:\n");
-    CombinedTransformation.Print();
 
     if (pNode->mNumMeshes > 0) {
         printf("Num meshes: %d - ", pNode->mNumMeshes);
@@ -258,7 +263,7 @@ void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, unsigned int MeshIn
 
         if (paiMesh->HasTextureCoords(0)) {
             const aiVector3D& pTexCoord = paiMesh->mTextureCoords[0][i];
-            v.TexCoords = Vector2f(pTexCoord.x, pTexCoord.y);
+            v.TexCoords = glm::vec2(pTexCoord.x, pTexCoord.y);
 
             const aiVector3D& pTangent = paiMesh->mTangents[i];
             v.Tangent = glm::vec3(pTangent.x, pTangent.y, pTangent.z);
@@ -267,7 +272,7 @@ void CoreModel::InitSingleMesh(vector<VertexType>& Vertices, unsigned int MeshIn
             v.Bitangent = glm::vec3(pBitangent.x, pBitangent.y, pBitangent.z);
         }
         else {
-            v.TexCoords = Vector2f(0.0f);
+            v.TexCoords = glm::vec2(0.0f);
             v.Tangent = glm::vec3(0.0f);
             v.Bitangent = glm::vec3(0.0f);
         }
@@ -335,7 +340,7 @@ void CoreModel::InitSingleMeshOpt(vector<VertexType>& AllVertices, unsigned int 
         }
 
         const aiVector3D& pTexCoord = paiMesh->HasTextureCoords(0) ? paiMesh->mTextureCoords[0][i] : Zero3D;
-        v.TexCoords = Vector2f(pTexCoord.x, pTexCoord.y);
+        v.TexCoords = glm::vec2(pTexCoord.x, pTexCoord.y);
 
         const aiVector3D& pTangent = paiMesh->mTangents[i];
         v.Tangent = glm::vec3(pTangent.x, pTangent.y, pTangent.z);
@@ -565,11 +570,8 @@ void CoreModel::LoadDiffuseTexture(const string& Dir, const aiMaterial* pMateria
         if (!s_pMissingTexture) {
             printf("Loading default texture\n");
             s_pMissingTexture = AllocTexture2D();
-#ifdef OGLDEV_VULKAN   // hack due to different local dirs
-            s_pMissingTexture->Load("../../Content/Textures/no_texture.png");
-#else
-            s_pMissingTexture->Load("../Content/Textures/no_texture.png");
-#endif
+
+            s_pMissingTexture->Load("../Assets/Textures/no_texture.png");
         }
 
         m_Materials[MaterialIndex].pDiffuse = s_pMissingTexture;
@@ -802,9 +804,6 @@ static void traverse(int depth, aiNode* pNode)
 
     printf("%s\n", pNode->mName.C_Str());
 
-    glm::mat4 NodeTransformation(pNode->mTransformation);
-    NodeTransformation.Print();
-
     for (unsigned int i = 0; i < pNode->mNumChildren; i++) {
         traverse(depth + 1, pNode->mChildren[i]);
     }
@@ -832,58 +831,31 @@ void CoreModel::InitSingleCamera(int Index, const aiScene* pScene)
     glm::mat4 Transformation;
     GetFullTransformation(pScene->mRootNode, pCamera->mName.C_Str(), Transformation);
 
-    aiMatrix4x4 aiCameraMatrix;
-    pCamera->GetCameraMatrix(aiCameraMatrix);
-    glm::mat4 CameraMatrix(aiCameraMatrix);
-    printf("Camera internal transformation:\n");
-    CameraMatrix.Print();
-
-    glm::mat4 ChangeSystem;
-    ChangeSystem.InitIdentity();
-    ChangeSystem.m[2][2] = -1;
-
-    printf("Final camera transformation:\n");
-    //Transformation = Transformation * ChangeSystem * CameraMatrix;
-    Transformation.Print();
-
-    //  Transformation =  CameraMatrix * Transformation;
-
     glm::vec3 Pos = VectorFromAssimpVector(pCamera->mPosition);
     glm::vec3 Target = VectorFromAssimpVector(pCamera->mLookAt);
     glm::vec3 Up = VectorFromAssimpVector(pCamera->mUp);
 
-    printf("Original pos: "); Pos.Print();
-    printf("Original target: "); Target.Print();
-    printf("Original up: "); Up.Print();
-
     glm::vec4 Pos4D(Pos, 1.0f);
     Pos4D = Transformation * Pos4D;
-    glm::vec3 FinalPos = Pos4D;
+    glm::vec3 FinalPos(Pos4D);
 
     glm::vec4 Target4D(Target, 0.0f);
     Target4D = Transformation * Target4D;
-    glm::vec3 FinalTarget = Target4D;
+    glm::vec3 FinalTarget(Target4D);
 
     glm::vec4 Up4D(Up, 0.0f);
     Up4D = Transformation * Up4D;
-    glm::vec3 FinalUp = Up4D;
-
-    printf("Final pos: "); FinalPos.Print();
-    printf("Final target: "); FinalTarget.Print();
-    printf("Final up: "); FinalUp.Print();
+    glm::vec3 FinalUp(Up4D);
 
     PersProjInfo persProjInfo;
     persProjInfo.zNear = pCamera->mClipPlaneNear;
     persProjInfo.zFar = pCamera->mClipPlaneFar;
     persProjInfo.Width = pCamera->mAspect;
-
     persProjInfo.Height = 1.0f;
     persProjInfo.FOV = ToDegree(pCamera->mHorizontalFOV) / 2.0f;
 
-    //exit(0);*/
-
     glm::vec3 Center = FinalPos + FinalTarget;
-    m_cameras[Index].Init(FinalPos.ToGLM(), Center.ToGLM(), FinalUp.ToGLM(), persProjInfo);
+    m_cameras[Index].Init(FinalPos, persProjInfo);
 }
 
 
@@ -933,7 +905,7 @@ void CoreModel::InitSingleLight(const aiScene* pScene, const aiLight& light)
 
 static bool GetFullTransformation(const aiNode* pRootNode, const char* pName, glm::mat4& Transformation)
 {
-    Transformation.InitIdentity();
+    Transformation = glm::mat4(1.0f);
 
     const aiNode* pNode = pRootNode->FindNode(pName);
 
@@ -943,7 +915,7 @@ static bool GetFullTransformation(const aiNode* pRootNode, const char* pName, gl
     }
 
     while (pNode) {
-        glm::mat4 NodeTransformation(pNode->mTransformation);
+        glm::mat4 NodeTransformation = AssimpToGLM(pNode->mTransformation);
         Transformation = NodeTransformation * Transformation;
         pNode = pNode->mParent;
     }
@@ -960,26 +932,21 @@ void CoreModel::InitDirectionalLight(const aiScene* pScene, const aiLight& light
     }
 
     DirectionalLight l;
-    //l.Color = glm::vec3(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
     l.Color = glm::vec3(1.0f);
-    l.DiffuseIntensity = 1.0f; // TODO
+    l.DiffuseIntensity = 1.0f;
 
     glm::mat4 Transformation;
     GetFullTransformation(pScene->mRootNode, light.mName.C_Str(), Transformation);
 
     glm::vec3 Direction = VectorFromAssimpVector(light.mDirection);
-    printf("Original direction: "); Direction.Print();
     glm::vec4 Dir4D(Direction, 0.0f);
     Dir4D = Transformation * Dir4D;
-    l.WorldDirection = Dir4D;
-    printf("Final direction: "); l.WorldDirection.Print();
+    l.WorldDirection = glm::vec3(Dir4D);
 
     glm::vec3 Up = VectorFromAssimpVector(light.mUp);
-    printf("Original up: "); Up.Print();
     glm::vec4 Up4D(Up, 0.0f);
     Up4D = Transformation * Up4D;
-    l.Up = Up4D;
-    printf("Final up: "); l.Up.Print();
+    l.Up = glm::vec3(Up4D);
 
     m_dirLights.push_back(l);
 }
@@ -989,11 +956,9 @@ void CoreModel::InitPointLight(const aiScene* pScene, const aiLight& light)
 {
     PointLight l;
     l.Color = glm::vec3(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
-    //l.Color = glm::vec3(1.0f);
-    l.DiffuseIntensity = 1.0f; // TODO
+    l.DiffuseIntensity = 1.0f;
 
     glm::vec3 Position = VectorFromAssimpVector(light.mPosition);
-    printf("Original Position: "); Position.Print();
 
     glm::mat4 Transformation;
 
@@ -1001,8 +966,7 @@ void CoreModel::InitPointLight(const aiScene* pScene, const aiLight& light)
 
     glm::vec4 Pos4D(Position, 1.0f);
     Pos4D = Transformation * Pos4D;
-    glm::vec3 WorldPosition = Pos4D;
-    printf("World Position: "); WorldPosition.Print();
+    glm::vec3 WorldPosition(Pos4D);
     l.WorldPosition = WorldPosition;
 
     l.Attenuation.Constant = light.mAttenuationConstant;
@@ -1018,23 +982,19 @@ void CoreModel::InitPointLight(const aiScene* pScene, const aiLight& light)
 void CoreModel::InitSpotLight(const aiScene* pScene, const aiLight& light)
 {
     SpotLight l;
-    //l.Color = glm::vec3(light.mColorDiffuse.r, light.mColorDiffuse.g, light.mColorDiffuse.b);
     l.Color = glm::vec3(1.0f);
-    l.DiffuseIntensity = 1.0f; // TODO
+    l.DiffuseIntensity = 1.0f;
 
     glm::mat4 Transformation;
     GetFullTransformation(pScene->mRootNode, light.mName.C_Str(), Transformation);
 
     glm::vec3 Direction = VectorFromAssimpVector(light.mDirection);
-    printf("Original direction: "); Direction.Print();
     glm::vec4 Dir4D(Direction, 0.0f);
     Dir4D = Transformation * Dir4D;
-    l.WorldDirection = Dir4D;
-    printf("Final direction: "); l.WorldDirection.Print();
+    l.WorldDirection = glm::vec3(Dir4D);
 
     glm::vec3 Up = VectorFromAssimpVector(light.mUp);
-    printf("Original up: "); Up.Print();
-    if (Up.Length() == 0) {
+    if (glm::length(Up) == 0) {
         printf("Overiding a zero up vector\n");
         if ((Dir4D == glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)) || (Dir4D == glm::vec4(0.0f, -1.0f, 0.0f, 0.0f))) {
             l.Up = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -1046,17 +1006,13 @@ void CoreModel::InitSpotLight(const aiScene* pScene, const aiLight& light)
     else {
         glm::vec4 Up4D(Up, 0.0f);
         Up4D = Transformation * Up4D;
-        l.Up = Up4D;
+        l.Up = glm::vec3(Up4D);
     }
 
-    printf("Final up: "); l.Up.Print();
-
     glm::vec3 Position = VectorFromAssimpVector(light.mPosition);
-    printf("Original Position: "); Position.Print();
     glm::vec4 Pos4D(Position, 1.0f);
     Pos4D = Transformation * Pos4D;
-    glm::vec3 WorldPosition = Pos4D;
-    printf("World Position: "); WorldPosition.Print();
+    glm::vec3 WorldPosition(Pos4D);
     l.WorldPosition = WorldPosition;
 
     l.Attenuation.Constant = light.mAttenuationConstant;
@@ -1098,15 +1054,13 @@ void CoreModel::LoadSingleBone(vector<SkinnedVertex>& SkinnedVertices, unsigned 
     int BoneId = GetBoneId(pBone);
 
     if (BoneId == m_BoneInfo.size()) {
-        BoneInfo bi(pBone->mOffsetMatrix);
-        // bi.OffsetMatrix.Print();
+        BoneInfo bi(AssimpToGLM(pBone->mOffsetMatrix));
         m_BoneInfo.push_back(bi);
     }
 
     for (unsigned int i = 0; i < pBone->mNumWeights; i++) {
         const aiVertexWeight& vw = pBone->mWeights[i];
         unsigned int GlobalVertexID = m_Meshes[MeshIndex].BaseVertex + pBone->mWeights[i].mVertexId;
-        // printf("%d: %d %f\n",i, pBone->mWeights[i].mVertexId, vw.mWeight);
         SkinnedVertices[GlobalVertexID].Bones.AddBoneData(BoneId, vw.mWeight);
     }
 
@@ -1304,7 +1258,7 @@ void CoreModel::ReadNodeHierarchy(float AnimationTimeTicks, const aiNode* pNode,
 {
     string NodeName(pNode->mName.data);
 
-    glm::mat4 NodeTransformation(pNode->mTransformation);
+    glm::mat4 NodeTransformation = AssimpToGLM(pNode->mTransformation);
 
     const aiNodeAnim* pNodeAnim = FindNodeAnim(Animation, NodeName);
 
@@ -1312,17 +1266,10 @@ void CoreModel::ReadNodeHierarchy(float AnimationTimeTicks, const aiNode* pNode,
         LocalTransform Transform;
         CalcLocalTransform(Transform, AnimationTimeTicks, pNodeAnim);
 
-        glm::mat4 ScalingM;
-        ScalingM.InitScaleTransform(Transform.Scaling.x, Transform.Scaling.y, Transform.Scaling.z);
-        //        printf("Scaling %f %f %f\n", Transoform.Scaling.x, Transform.Scaling.y, Transform.Scaling.z);
+        glm::mat4 ScalingM = glm::scale(glm::mat4(1.0f), glm::vec3(Transform.Scaling.x, Transform.Scaling.y, Transform.Scaling.z));
+        glm::mat4 RotationM = glm::mat4_cast(glm::quat(Transform.Rotation.w, Transform.Rotation.x, Transform.Rotation.y, Transform.Rotation.z));
+        glm::mat4 TranslationM = glm::translate(glm::mat4(1.0f), glm::vec3(Transform.Translation.x, Transform.Translation.y, Transform.Translation.z));
 
-        glm::mat4 RotationM = glm::mat4(Transform.Rotation.GetMatrix());
-
-        glm::mat4 TranslationM;
-        TranslationM.InitTranslationTransform(Transform.Translation.x, Transform.Translation.y, Transform.Translation.z);
-        //        printf("Translation %f %f %f\n", Transform.Translation.x, Transform.Translation.y, Transform.Translation.z);
-
-        // Combine the above transformations
         NodeTransformation = TranslationM * RotationM * ScalingM;
     }
 
@@ -1355,7 +1302,7 @@ void CoreModel::ReadNodeHierarchyBlended(float StartAnimationTimeTicks, float En
 {
     string NodeName(pNode->mName.data);
 
-    glm::mat4 NodeTransformation(pNode->mTransformation);
+    glm::mat4 NodeTransformation = AssimpToGLM(pNode->mTransformation);
 
     const aiNodeAnim* pStartNodeAnim = FindNodeAnim(StartAnimation, NodeName);
 
@@ -1380,28 +1327,22 @@ void CoreModel::ReadNodeHierarchyBlended(float StartAnimationTimeTicks, float En
     }
 
     if (pStartNodeAnim && pEndNodeAnim) {
-        // Interpolate scaling
         const aiVector3D& Scale0 = StartTransform.Scaling;
         const aiVector3D& Scale1 = EndTransform.Scaling;
         aiVector3D BlendedScaling = (1.0f - BlendFactor) * Scale0 + Scale1 * BlendFactor;
-        glm::mat4 ScalingM;
-        ScalingM.InitScaleTransform(BlendedScaling.x, BlendedScaling.y, BlendedScaling.z);
+        glm::mat4 ScalingM = glm::scale(glm::mat4(1.0f), glm::vec3(BlendedScaling.x, BlendedScaling.y, BlendedScaling.z));
 
-        // Interpolate rotation
         const aiQuaternion& Rot0 = StartTransform.Rotation;
         const aiQuaternion& Rot1 = EndTransform.Rotation;
         aiQuaternion BlendedRot;
         aiQuaternion::Interpolate(BlendedRot, Rot0, Rot1, BlendFactor);
-        glm::mat4 RotationM = glm::mat4(BlendedRot.GetMatrix());
+        glm::mat4 RotationM = glm::mat4_cast(glm::quat(BlendedRot.w, BlendedRot.x, BlendedRot.y, BlendedRot.z));
 
-        // Interpolate translation
         const aiVector3D& Pos0 = StartTransform.Translation;
         const aiVector3D& Pos1 = EndTransform.Translation;
         aiVector3D BlendedTranslation = (1.0f - BlendFactor) * Pos0 + Pos1 * BlendFactor;
-        glm::mat4 TranslationM;
-        TranslationM.InitTranslationTransform(BlendedTranslation.x, BlendedTranslation.y, BlendedTranslation.z);
+        glm::mat4 TranslationM = glm::translate(glm::mat4(1.0f), glm::vec3(BlendedTranslation.x, BlendedTranslation.y, BlendedTranslation.z));
 
-        // Combine it all
         NodeTransformation = TranslationM * RotationM * ScalingM;
     }
 
@@ -1445,8 +1386,7 @@ void CoreModel::GetBoneTransforms(float TimeInSeconds, vector<glm::mat4>& Transf
         assert(0);
     }
 
-    glm::mat4 Identity;
-    Identity.InitIdentity();
+    glm::mat4 Identity(1.0f);
 
     float AnimationTimeTicks = CalcAnimationTimeTicks(TimeInSeconds, AnimationIndex);
     const aiAnimation& Animation = *m_pScene->mAnimations[AnimationIndex];
@@ -1487,8 +1427,7 @@ void CoreModel::GetBoneTransformsBlended(float TimeInSeconds,
     const aiAnimation& StartAnimation = *m_pScene->mAnimations[StartAnimIndex];
     const aiAnimation& EndAnimation = *m_pScene->mAnimations[EndAnimIndex];
 
-    glm::mat4 Identity;
-    Identity.InitIdentity();
+    glm::mat4 Identity(1.0f);
 
     ReadNodeHierarchyBlended(StartAnimationTimeTicks, EndAnimationTimeTicks, m_pScene->mRootNode, Identity, StartAnimation, EndAnimation, BlendFactor);
 

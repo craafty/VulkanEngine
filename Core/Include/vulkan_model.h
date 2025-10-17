@@ -2,8 +2,8 @@
 
 #include "vulkan_texture.h"
 #include "vulkan_graphics_pipeline.h"
-#include "Int/core_model.h"
-#include "Int/model_desc.h"
+#include "core_model.h"
+#include "model_desc.h"
 
 namespace Engine {
 
@@ -37,9 +37,9 @@ namespace Engine {
 
 		virtual void InitGeometryPost() { /* Nothing to do here */ }
 
-		virtual void PopulateBuffersSkinned(vector<SkinnedVertex>& Vertices) { assert(0); }
+		virtual void PopulateBuffersSkinned(std::vector<SkinnedVertex>& Vertices) { assert(0); }
 
-		virtual void PopulateBuffers(vector<Vertex>& Vertices);
+		virtual void PopulateBuffers(std::vector<Vertex>& Vertices);
 
 	private:
 		void UpdateModelDesc(ModelDesc& md);

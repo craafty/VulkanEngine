@@ -1,4 +1,7 @@
 #include <stdio.h>
+#ifdef _WIN64
+#include <direct.h>
+#endif
 #include <vector>
 
 #include <vulkan/vulkan.h>
@@ -49,16 +52,15 @@ namespace Engine {
 	}
 
 
-	static bool CompileShader(VkDevice& Device, glslang_stage_t Stage, const char* pShaderCode,
-		Shader& ShaderModule)
+	static bool CompileShader(VkDevice Device, glslang_stage_t Stage, const char* pShaderCode, Shader& ShaderModule)
 	{
 		glslang_input_t input = {
 			.language = GLSLANG_SOURCE_GLSL,
 			.stage = Stage,
 			.client = GLSLANG_CLIENT_VULKAN,
-			.client_version = GLSLANG_TARGET_VULKAN_1_1,
+			.client_version = GLSLANG_TARGET_VULKAN_1_3,
 			.target_language = GLSLANG_TARGET_SPV,
-			.target_language_version = GLSLANG_TARGET_SPV_1_3,
+			.target_language_version = GLSLANG_TARGET_SPV_1_6,
 			.code = pShaderCode,
 			.default_version = 100,
 			.default_profile = GLSLANG_NO_PROFILE,
@@ -159,11 +161,20 @@ namespace Engine {
 	}
 
 
-	VkShaderModule CreateShaderModuleFromText(VkDevice& Device, const char* pFilename)
+	VkShaderModule CreateShaderModuleFromText(VkDevice Device, const char* pFilename)
 	{
 		std::string Source;
 
+		char CurWorkDir[256];
+#ifdef _WIN64
+		_getcwd(&CurWorkDir[0], ARRAY_SIZE_IN_ELEMENTS(CurWorkDir));
+#else
+		getcwd(&CurWorkDir[0], ARRAY_SIZE_IN_ELEMENTS(CurWorkDir));
+#endif
+
 		if (!ReadFile(pFilename, Source)) {
+			printf("Current work dir: %s\n", CurWorkDir);
+
 			assert(0);
 		}
 
@@ -178,7 +189,7 @@ namespace Engine {
 		bool Success = CompileShader(Device, ShaderStage, Source.c_str(), ShaderModule);
 
 		if (Success) {
-			printf("Created shader from text file '%s'\n", pFilename);
+			printf("Created shader from text file '%s\\%s'\n", CurWorkDir, pFilename);
 			ret = ShaderModule.ShaderModule;
 			std::string BinaryFilename = std::string(pFilename) + ".spv";
 			WriteBinaryFile(BinaryFilename.c_str(), ShaderModule.SPIRV.data(),
@@ -191,7 +202,7 @@ namespace Engine {
 	}
 
 
-	VkShaderModule CreateShaderModuleFromBinary(VkDevice& Device, const char* pFilename)
+	VkShaderModule CreateShaderModuleFromBinary(VkDevice Device, const char* pFilename)
 	{
 		int codeSize = 0;
 		char* pShaderCode = ReadBinaryFile(pFilename, codeSize);

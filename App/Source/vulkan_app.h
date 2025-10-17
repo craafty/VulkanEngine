@@ -39,18 +39,12 @@ public:
 		vkDestroyShaderModule(m_device, m_fs, NULL);
 		delete m_pPipeline;
 		vkDestroyRenderPass(m_device, m_renderPass, NULL);
-		m_mesh.Destroy(m_device);
-
-		for (int i = 0; i < m_uniformBuffers.size(); i++) {
-			m_uniformBuffers[i].Destroy(m_device);
-		}
+		m_model.Destroy();
 	}
 
 	void Init(const char* pAppName)
 	{
 		m_pWindow = Engine::glfw_vulkan_init(m_windowWidth, m_windowHeight, pAppName);
-
-		glfwSetInputMode(m_pWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 		m_vkCore.Init(pAppName, m_pWindow, true);
 		m_device = m_vkCore.GetDevice();
@@ -60,12 +54,11 @@ public:
 		m_frameBuffers = m_vkCore.CreateFramebuffers(m_renderPass);
 		CreateShaders();
 		CreateMesh();
-		CreateUniformBuffers();
 		CreatePipeline();
 		CreateCommandBuffers();
 		RecordCommandBuffers();
 		DefaultCreateCameraPers();
-
+		// The object is ready to receive callbacks
 		Engine::glfw_vulkan_set_callbacks(m_pWindow, this);
 	}
 
@@ -176,66 +169,24 @@ private:
 
 	void CreateMesh()
 	{
-		CreateVertexBuffer();
-		LoadTexture();
-	}
-
-	void CreateVertexBuffer()
-	{
-		struct Vertex {
-			Vertex(const glm::vec3& p, const glm::vec2& t)
-			{
-				Pos = p;
-				Tex = t;
-			}
-
-			glm::vec3 Pos;
-			glm::vec2 Tex;
-		};
-
-		std::vector<Vertex> Vertices = {
-			Vertex({-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f}),	// Bottom left
-			Vertex({-1.0f, 1.0f, 0.0f},  {0.0f, 1.0f}), // Top left
-			Vertex({1.0f,  1.0f, 0.0f},  {1.0f, 1.0f}), // Top right
-			Vertex({-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f}), // Bottom left
-			Vertex({1.0f, 1.0f, 0.0f},   {1.0f, 1.0f}), // Top right
-			Vertex({1.0f,  -1.0f, 0.0f}, {1.0f, 0.0f}), // Bottom right
-
-			Vertex({-1.0f, -1.0f, 5.0f}, {0.0f, 0.0f}), // Bottom left
-			Vertex({-1.0f, 1.0f, 5.0f},  {0.0f, 1.0f}), // Top left
-			Vertex({1.0f,  1.0f, 5.0f},  {1.0f, 1.0f})  // Top right
-		};
-
-		m_mesh.m_vertexBufferSize = sizeof(Vertices[0]) * Vertices.size();
-		m_mesh.m_vb = m_vkCore.CreateVertexBuffer(Vertices.data(), m_mesh.m_vertexBufferSize);
-	}
-
-	void LoadTexture()
-	{
-		m_mesh.m_pTex = new Engine::VulkanTexture;
-		m_vkCore.CreateTexture("../Assets/bricks.jpg", *(m_mesh.m_pTex));
+		m_model.Init(&m_vkCore);
+		m_model.LoadAssimpModel("../Assets/Models/crytek_sponza/sponza.obj");
 	}
 
 	struct UniformData {
 		glm::mat4 WVP;
 	};
 
-	void CreateUniformBuffers()
-	{
-		m_uniformBuffers = m_vkCore.CreateUniformBuffers(sizeof(UniformData));
-	}
-
 	void CreateShaders()
 	{
-		m_vs = Engine::CreateShaderModuleFromText(m_vkCore.GetDevice(), "Shaders/test.vert");
+		m_vs = Engine::CreateShaderModuleFromText(m_device, "test.vert");
 
-		m_fs = Engine::CreateShaderModuleFromText(m_vkCore.GetDevice(), "Shaders/test.frag");
+		m_fs = Engine::CreateShaderModuleFromText(m_device, "test.frag");
 	}
 
 	void CreatePipeline()
 	{
-		m_pPipeline = new Engine::GraphicsPipeline(m_device, m_pWindow, m_renderPass, m_vs, m_fs, &m_mesh, m_numImages,
-			m_uniformBuffers, sizeof(UniformData), true);
+		m_pPipeline = new Engine::GraphicsPipeline(m_device, m_pWindow, m_renderPass, m_vs, m_fs, m_numImages);
 	}
 
 	void RecordCommandBuffers()
@@ -262,25 +213,24 @@ private:
 			.pClearValues = ClearValues.data()
 		};
 
+		m_model.CreateDescriptorSets(*m_pPipeline);
+
 		for (unsigned int i = 0; i < m_cmdBufs.size(); i++) {
-			Engine::BeginCommandBuffer(m_cmdBufs[i], VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+			VkCommandBuffer& CmdBuf = m_cmdBufs[i];
+
+			Engine::BeginCommandBuffer(CmdBuf, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
 
 			RenderPassBeginInfo.framebuffer = m_frameBuffers[i];
 
-			vkCmdBeginRenderPass(m_cmdBufs[i], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBeginRenderPass(CmdBuf, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			m_pPipeline->Bind(m_cmdBufs[i], i);
+			m_pPipeline->Bind(CmdBuf);
 
-			uint32_t VertexCount = 9;
-			uint32_t InstanceCount = 1;
-			uint32_t FirstVertex = 0;
-			uint32_t FirstInstance = 0;
+			m_model.RecordCommandBuffer(CmdBuf, *m_pPipeline, i);
 
-			vkCmdDraw(m_cmdBufs[i], VertexCount, InstanceCount, FirstVertex, FirstInstance);
+			vkCmdEndRenderPass(CmdBuf);
 
-			vkCmdEndRenderPass(m_cmdBufs[i]);
-
-			VkResult res = vkEndCommandBuffer(m_cmdBufs[i]);
+			VkResult res = vkEndCommandBuffer(CmdBuf);
 			CHECK_VK_RESULT(res, "vkEndCommandBuffer\n");
 		}
 
@@ -291,14 +241,18 @@ private:
 	void UpdateUniformBuffers(uint32_t ImageIndex)
 	{
 		static float foo = 0.0f;
+
+		glm::mat4 Rotate0 = glm::mat4(1.0);
+		Rotate0 = glm::rotate(Rotate0, glm::radians(180.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f)));
+
 		glm::mat4 Rotate = glm::mat4(1.0);
-		Rotate = glm::rotate(Rotate, glm::radians(foo), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
-		foo += 0.001f;
+		Rotate = glm::rotate(Rotate, glm::radians(foo), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
+		foo += 0.005f;
 
 		glm::mat4 VP = m_pGameCamera->GetVPMatrix();
 
-		glm::mat4 WVP = VP; // * Rotate
-		m_uniformBuffers[ImageIndex].Update(m_device, &WVP, sizeof(WVP));
+		glm::mat4 WVP = VP * Rotate * Rotate0;
+		m_model.Update(ImageIndex, WVP);
 	}
 
 	GLFWwindow* m_pWindow = NULL;
@@ -307,13 +261,12 @@ private:
 	VkDevice m_device = NULL;
 	int m_numImages = 0;
 	std::vector<VkCommandBuffer> m_cmdBufs;
-	VkRenderPass m_renderPass;
+	VkRenderPass m_renderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> m_frameBuffers;
-	VkShaderModule m_vs;
-	VkShaderModule m_fs;
+	VkShaderModule m_vs = VK_NULL_HANDLE;
+	VkShaderModule m_fs = VK_NULL_HANDLE;
 	Engine::GraphicsPipeline* m_pPipeline = NULL;
-	Engine::SimpleMesh m_mesh;
-	std::vector<Engine::BufferAndMemory> m_uniformBuffers;
+	Engine::VkModel m_model;
 	Camera* m_pGameCamera = NULL;
 	int m_windowWidth = 0;
 	int m_windowHeight = 0;

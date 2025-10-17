@@ -38,7 +38,7 @@ IRenderingSystem* IRenderingSystem::CreateRenderingSystem(RENDERING_SYSTEM Rende
 
     switch (RenderingSystem) {
     case RENDERING_SYSTEM_GL:
-        g_pRenderingSystem = new RenderingSystemGL(pGameCallbacks, LoadBasicShapes);
+        // g_pRenderingSystem = new RenderingSystemGL(pGameCallbacks, LoadBasicShapes);
         break;
 
     default:

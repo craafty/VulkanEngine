@@ -3,8 +3,10 @@
 #include <assert.h>
 #include <cstdarg>
 #include <cstdio>
+
+#define NOMINMAX 
 #ifdef _WIN32
-    #include <windows.h>
+	#include <windows.h>
 #endif
 
 bool ReadFile(const char* fileName, std::string& outFile);
@@ -19,3 +21,8 @@ void myFileError(const char* pFileName, unsigned int line, const char* pFileErro
 #define MY_FILE_ERROR(FileError) myFileError(__FILE__, __LINE__, FileError);
 
 #define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))
+#define ARRAY_SIZE_IN_BYTES(a) (sizeof(a[0]) * a.size())
+
+std::string GetDirFromFilename(const std::string& Filename);
+
+#define CLAMP(Val, Start, End) std::min(std::max((Val), (Start)), (End));
